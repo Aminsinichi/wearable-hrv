@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import ipywidgets as widgets
 from scipy.stats import linregress
+from copy import deepcopy
 from IPython.display import display, clear_output
 
 ###########################################################################
@@ -77,6 +78,41 @@ def import_data (path, conditions, devices, features):
 ###########################################################################
 ###########################################################################
 ###########################################################################
+
+def nan_handling (data, devices, features, conditions):
+    """
+    This function takes a nested dictionary containing the data and replaces [nan] values with an empty list [].
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data, with keys for devices, features, and conditions.
+    devices : list
+        A list of strings representing the different devices used to collect the data.
+    features : list
+        A list of strings representing the different features of the data.
+    conditions : list
+        A list of strings representing the different experimental conditions of the data.
+
+    Returns:
+    --------
+    new_data : dict
+        A nested dictionary with [nan] values replaced with [].
+    """
+    new_data = deepcopy(data)
+    for device in devices:
+        for feature in features:
+            for condition in conditions:
+                values = new_data[device][feature][condition]
+                for key, value in values.items():
+                    if isinstance(value, list) and len(value) == 1 and pd.isna(value[0]):
+                        new_data[device][feature][condition][key] = []
+    return new_data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
 
 def save_data (data, path, conditions, devices, features, file_names):
 
