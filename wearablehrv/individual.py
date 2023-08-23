@@ -374,7 +374,8 @@ def calculate_ibi (data_chopped, devices, conditions):
 ###########################################################################
 ###########################################################################
 
-def visual_inspection (data_chopped, devices, conditions,criterion):
+def visual_inspection_old (data_chopped, devices, conditions,criterion):
+# this function used to work just fine. I introduced an upgraded function after this, and keeping to as a backup for now. 
 
     """
     This function allows for visual inspection and manual modification of the RR interval data.
@@ -609,6 +610,273 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
     # Add the save crop function to the button click event
     save_crop_button.on_click(lambda b: save_crop(device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value))
 
+
+    # Display the GUI
+    display(gui_box)
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def visual_inspection (data_chopped, devices, conditions, criterion):
+
+    """
+    This function allows for visual inspection and manual modification of the RR interval data.
+
+    Parameters:
+    -----------
+    data_chopped : dict
+        A dictionary containing the chopped RR interval data for all devices and conditions.
+    devices : list
+        A list of strings that represent the different devices used to collect the data.
+    conditions : list
+        A list of strings that represent the different conditions in the task.
+    criterion : str
+        A string that represents the device used as the criterion device.
+
+    Returns:
+    --------
+    None
+    """
+
+    # Define the function that creates the plot
+    def plot_rr_intervals(device, condition, lag, device_start, device_end, criterion_start, criterion_end):
+        # Trimming
+        trim_device = slice(device_start, device_end)
+        trim_criterion = slice(criterion_start, criterion_end)
+
+        # Get the RR intervals and timestamps for the selected condition and device
+        ppg_rr = data_chopped[device][condition]['rr'][trim_device]
+        ppg_timestamp = data_chopped[device][condition]['timestamp'][trim_device]
+
+        # Get the RR intervals and timestamps for the criterion (vu)
+        criterion_rr = data_chopped[criterion][condition]['rr'][trim_criterion]
+        criterion_timestamp = data_chopped[criterion][condition]['timestamp'][trim_criterion]
+
+        # Adjust lag based on precision (seconds or milliseconds)
+        if precision_dropdown.value == 'Milliseconds':
+            lag = lag / 1000  # Convert milliseconds to seconds
+
+        # Shift the timestamps of the PPG device by the lag amount
+        ppg_timestamp = ppg_timestamp + pd.Timedelta(seconds=lag)
+
+        # Create a figure with a larger size
+        plt.figure(figsize=(17, 5))
+
+        # Plot the RR intervals for the selected device and the criterion
+        plt.plot(ppg_timestamp, ppg_rr, '-o', color='red', label=device, markersize=7)
+        plt.plot(criterion_timestamp, criterion_rr, '-o', color='black', label=criterion, markersize=7)
+
+        # Add grid lines to the plot
+        plt.grid()
+
+        # Set the title and axis labels
+        plt.title("Beat-to-beat intervals for {} condition".format(condition))
+        plt.xlabel("Timestamp", fontsize=20)
+        plt.ylabel("RR Intervals", fontsize=20)
+
+        # Format the x-axis as dates
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        plt.gca().xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=7))
+
+        # Rotate the x-axis labels
+        plt.xticks(rotation=90)
+
+        # Add a legend to the plot
+        plt.legend()
+
+        # Show the plot
+        plt.show()
+
+    # Define the function that saves the lag
+    def save_lag(lag):
+        # Adjust lag based on precision (seconds or milliseconds)
+        if precision_dropdown.value == 'Milliseconds':
+            lag = lag / 1000  # Convert milliseconds to seconds
+
+        if correction_mode_dropdown.value == "Full Lag Correction":
+            for condition in conditions:
+                ppg_timestamp = data_chopped[device_dropdown.value][condition]['timestamp']
+                data_chopped[device_dropdown.value][condition]['timestamp'] = ppg_timestamp + pd.Timedelta(seconds=lag)
+        else:
+            ppg_timestamp = data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp']
+            data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp'] = ppg_timestamp + pd.Timedelta(seconds=lag)
+
+        # Reset the lag to 0
+        lag_slider.value = 0
+
+        # Display a message to inform the user that the data has been modified
+        print("Data has been modified with a lag of {} seconds.".format(lag))
+
+    def save_crop(device_start, device_end, criterion_start, criterion_end):
+        data_chopped[device_dropdown.value][condition_dropdown.value]['rr'] = data_chopped[device_dropdown.value][condition_dropdown.value]['rr'][device_start:device_end]
+        data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp'] = data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp'][device_start:device_end]
+
+        data_chopped[criterion][condition_dropdown.value]['rr'] = data_chopped[criterion][condition_dropdown.value]['rr'][criterion_start:criterion_end]
+        data_chopped[criterion][condition_dropdown.value]['timestamp'] = data_chopped[criterion][condition_dropdown.value]['timestamp'][criterion_start:criterion_end]
+
+        # Drop any rows with NaN or NaT values in RR intervals and timestamp columns for both device and criterion
+        data_chopped[device_dropdown.value][condition_dropdown.value].dropna(subset=['rr', 'timestamp'], inplace=True)
+        data_chopped[criterion][condition_dropdown.value].dropna(subset=['rr', 'timestamp'], inplace=True)
+
+        update_device_condition()
+        print("Cropped data has been saved.")
+
+    def update_device_condition(*args):
+        lag_slider.value = 0
+
+        device_start_slider.value = 0
+        device_start_slider.max = len(data_chopped[device_dropdown.value][condition_dropdown.value]['rr']) - 1
+        device_end_slider.max = len(data_chopped[device_dropdown.value][condition_dropdown.value]['rr'])
+        device_end_slider.value = len(data_chopped[device_dropdown.value][condition_dropdown.value]['rr'])
+
+        criterion_start_slider.value = 0
+        criterion_start_slider.max = len(data_chopped[criterion][condition_dropdown.value]['rr']) - 1
+        criterion_end_slider.max = len(data_chopped[criterion][condition_dropdown.value]['rr'])
+        criterion_end_slider.value = len(data_chopped[criterion][condition_dropdown.value]['rr'])
+
+        with out:
+            clear_output(True)
+            plot_rr_intervals(device_dropdown.value, condition_dropdown.value, lag_slider.value, device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value)
+
+    def update_plot(change):
+        with out:
+            clear_output(True)
+            plot_rr_intervals(device_dropdown.value, condition_dropdown.value, lag_slider.value, device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value)
+
+    # Create two sets of start and end slider widgets for device and criterion
+    device_start_slider = widgets.IntSlider(min=0, max=len(data_chopped[devices[0]][conditions[0]]['rr'])-1, value=0, description='Device Start:', continuous_update=False)
+    device_end_slider = widgets.IntSlider(min=1, max=len(data_chopped[devices[0]][conditions[0]]['rr']), value=len(data_chopped[devices[0]][conditions[0]]['rr']), description='Device End:', continuous_update=False)
+
+    criterion_start_slider = widgets.IntSlider(min=0, max=len(data_chopped[criterion][conditions[0]]['rr'])-1, value=0, description='Criterion Start:', continuous_update=False)
+    criterion_end_slider = widgets.IntSlider(min=1, max=len(data_chopped[criterion][conditions[0]]['rr']), value=len(data_chopped[criterion][conditions[0]]['rr']), description='Criterion End:', continuous_update=False)
+
+    # Define the widget for lag correction mode
+    correction_mode_dropdown = widgets.Dropdown(
+        options=['Individual Lag Correction', 'Full Lag Correction'],
+        value='Individual Lag Correction',
+        description='Correction Mode:',
+        disabled=False,
+    )
+
+    # Define the precision dropdown widget
+    precision_dropdown = widgets.Dropdown(
+        options=['Seconds', 'Milliseconds'],
+        value='Seconds',
+        description='Precision:',
+        disabled=False,
+    )
+
+    # Function to update lag_slider parameters based on precision
+    def update_lag_slider_precision(*args):
+        if precision_dropdown.value == 'Seconds':
+            lag_slider.min = -20
+            lag_slider.max = 20
+            lag_slider.value = 0
+            lag_slider.description = 'Lag (s):'
+            lag_slider.readout_format = 'd'
+        else:
+            lag_slider.min = -20000
+            lag_slider.max = 20000
+            lag_slider.value = 0
+            lag_slider.description = 'Lag (ms):'
+            lag_slider.readout_format = 'd'
+
+    # Observe changes in precision dropdown and update lag slider accordingly
+    precision_dropdown.observe(update_lag_slider_precision, names='value')
+
+    # Create the device dropdown widget
+    device_dropdown = widgets.Dropdown(
+        options=devices,
+        value=devices[0],
+        description='Device:',
+        disabled=False,
+    )
+
+    condition_dropdown = widgets.Dropdown(
+        options=conditions,
+        value=conditions[0],
+        description='Condition:',
+        disabled=False,
+    )
+
+    lag_slider = widgets.IntSlider(
+        value=0,
+        min=-20,
+        max=20,
+        step=1,
+        description='Lag (s):',
+        disabled=False,
+        continuous_update=False,
+        orientation='horizontal',
+        readout=True,
+        readout_format='d'
+    )
+    lag_slider.layout = widgets.Layout(width='80%')
+
+    # Define the buttons
+    plot_button = widgets.Button(
+        description='Plot RR Intervals',
+        disabled=False,
+        button_style='',
+        tooltip='Click me',
+        icon='check'
+    )
+    save_button = widgets.Button(
+        description='Save Lag',
+        disabled=False,
+        button_style='',
+        tooltip='Click me',
+        icon='save'
+    )
+    save_crop_button = widgets.Button(
+        description='Save Crop',
+        disabled=False,
+        button_style='',
+        tooltip='Click me',
+        icon='crop'
+    )
+
+    # Create the output widget
+    out = widgets.Output()
+
+    # Define the trimming box
+    trimming_box = widgets.VBox(children=[
+        widgets.HBox(children=[device_start_slider, device_end_slider]),
+        widgets.HBox(children=[criterion_start_slider, criterion_end_slider]),
+    ])
+
+    # Register event listeners
+    lag_slider.observe(update_plot, names='value')
+    device_start_slider.observe(update_plot, names='value')
+    device_end_slider.observe(update_plot, names='value')
+    criterion_start_slider.observe(update_plot, names='value')
+    criterion_end_slider.observe(update_plot, names='value')
+    device_dropdown.observe(update_device_condition, names='value')
+    condition_dropdown.observe(update_device_condition, names='value')
+    save_button.on_click(lambda b: save_lag(lag_slider.value))
+    save_crop_button.on_click(lambda b: save_crop(device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value))
+
+    # Create the GUI layout
+
+    widgets_box = widgets.VBox(children=[
+        widgets.HBox(children=[device_dropdown, condition_dropdown]),
+        widgets.HBox(children=[correction_mode_dropdown, precision_dropdown]),
+        widgets.HBox(children=[lag_slider, widgets.VBox(children=[save_button, save_crop_button])]),
+        trimming_box
+    ])
+
+    output_box = widgets.VBox(children=[out])
+
+    gui_box_layout = widgets.Layout(display='flex',
+                                    flex_flow='column',
+                                    align_items='stretch',
+                                    width='80%')
+    gui_box = widgets.Box(children=[widgets_box, output_box],
+                        layout=gui_box_layout)
+
+    # Call the function to render the initial plot inside the output widget
+    update_device_condition()
 
     # Display the GUI
     display(gui_box)
