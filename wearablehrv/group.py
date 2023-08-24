@@ -107,6 +107,8 @@ def nan_handling (data, devices, features, conditions):
                 for key, value in values.items():
                     if isinstance(value, list) and len(value) == 1 and pd.isna(value[0]):
                         new_data[device][feature][condition][key] = []
+    
+    print ("NaN values are removed from the data")
     return new_data
 
 ###########################################################################
@@ -856,7 +858,7 @@ def bar_plot (data, conditions, features, devices):
 ###########################################################################
 ###########################################################################
 
-def regression_analysis (data, criterion, conditions, devices, features):
+def regression_analysis (data, criterion, conditions, devices, features, path, save_as_csv=False):
 
     """
     This function performs linear regression analysis on the given data, conditions, features, and devices. It calculates the slope, intercept, r_value, p_value, and std_err for each device and criterion pair, feature, and condition.
@@ -907,6 +909,26 @@ def regression_analysis (data, criterion, conditions, devices, features):
                     regression_data[device][feature][condition] = None
 
     print("Done Successfully!")
+
+    if save_as_csv:
+        # Convert nested dictionary to a list of rows
+        rows = []
+        for device in regression_data:
+            for feature in regression_data[device]:
+                for condition in regression_data[device][feature]:
+                    row_data = regression_data[device][feature][condition]
+                    if row_data:
+                        rows.append([device, feature, condition, row_data['slope'], row_data['intercept'], row_data['r_value'], row_data['p_value'], row_data['std_err']])
+                    else:
+                        rows.append([device, feature, condition, None, None, None, None, None])
+
+        # Convert list of rows to DataFrame
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'Slope', 'Intercept', 'R Value', 'P Value', 'Std Err'])
+        
+        # Save DataFrame to CSV
+        df.to_csv(path + 'regression_data.csv', index=False)
+        print("CSV File is saved successfully")
+
     return regression_data
 
 ###########################################################################
@@ -1098,7 +1120,7 @@ def heatmap_plot (data, criterion, devices, conditions, features):
 ###########################################################################
 ###########################################################################
 
-def icc_analysis (data, criterion, devices, conditions, features):
+def icc_analysis (data, criterion, devices, conditions, features, path, save_as_csv):
 
     """
     This function calculates the Intraclass Correlation Coefficient (ICC) for each device compared to the criterion device, for each condition and feature.
@@ -1151,6 +1173,31 @@ def icc_analysis (data, criterion, devices, conditions, features):
                     icc_data[device][feature][condition] = None
 
     print("Done Successfully!")
+
+    if save_as_csv:
+        # Convert nested dictionary to a list of rows
+        rows = []
+        for device in icc_data:
+            for feature in icc_data[device]:
+                for condition in icc_data[device][feature]:
+                    row_data = icc_data[device][feature][condition]
+                    if row_data is not None:
+                        for index, icc_row in row_data.iterrows():
+                            rows.append([
+                                device, feature, condition, 
+                                icc_row['Type'], icc_row['ICC'], 
+                                icc_row['CI95%'], icc_row['pval']
+                            ])
+                    else:
+                        rows.append([device, feature, condition, None, None, None, None])
+
+        # Convert list of rows to DataFrame
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'ICC Type', 'ICC Value', 'ICC CI95%', 'p-value'])
+        
+        # Save DataFrame to CSV
+        df.to_csv(path+'icc_data.csv', index=False)
+        print("ICC data saved successfully!")
+
     return icc_data
 
 ###########################################################################
@@ -1243,7 +1290,7 @@ def icc_plot (icc_data, conditions, devices, features):
 ###########################################################################
 ###########################################################################
 
-def blandaltman_analysis (data, criterion, devices, conditions, features):
+def blandaltman_analysis (data, criterion, devices, conditions, features, path, save_as_csv=False):
 
     """
     This function calculates the Bland-Altman analysis for each device compared to the criterion device, for each condition and feature.
@@ -1296,6 +1343,30 @@ def blandaltman_analysis (data, criterion, devices, conditions, features):
                     blandaltman_data[device][feature][condition] = None
 
     print("Done Successfully!")
+
+    if save_as_csv:
+        # Convert nested dictionary to a list of rows
+        rows = []
+        for device in blandaltman_data:
+            for feature in blandaltman_data[device]:
+                for condition in blandaltman_data[device][feature]:
+                    row_data = blandaltman_data[device][feature][condition]
+                    if row_data:
+                        rows.append([
+                            device, feature, condition,
+                            row_data['bias'], row_data['sd'],
+                            row_data['limits_of_agreement'][0], row_data['limits_of_agreement'][1]
+                        ])
+                    else:
+                        rows.append([device, feature, condition, None, None, None, None])
+
+        # Convert list of rows to DataFrame
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'Bias', 'SD', 'Lower Limit of Agreement', 'Upper Limit of Agreement'])
+        
+        # Save DataFrame to CSV
+        df.to_csv(path+'blandaltman_data.csv', index=False)
+        print("Blandaltman Data saved successfully!")
+        
     return blandaltman_data
 
 ###########################################################################
