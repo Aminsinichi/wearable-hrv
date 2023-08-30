@@ -433,5 +433,147 @@ class TestIndividual(unittest.TestCase):
 
 #############################################################################################################################
 
+    @patch('matplotlib.pyplot.show', MagicMock(side_effect=[None]))  # Mocking plt.show() to prevent actual plot display
+    @patch('IPython.display.display', MagicMock())  # Mocking the display function to prevent actual display
+    @patch('ipywidgets.Output', MagicMock())  # Mocking the Output widget to prevent actual display
+    def test_line_plot(self):
+        # Create mock time_domain_features and frequency_domain_features dictionaries for the test
+        mock_time_domain_features = {
+            "device1": {
+                "condition1": {"rmssd": 50, "mean_nni": 1000},
+                "condition2": {"rmssd": 60, "mean_nni": 1100}
+            }
+        }
+
+        mock_frequency_domain_features = {
+            "device1": {
+                "condition1": {"hf": 0.5, "lf": 0.4},
+                "condition2": {"hf": 0.6, "lf": 0.5}
+            }
+        }
+        
+        # Check if the function runs without error
+        try:
+            individual.line_plot(
+                mock_time_domain_features,
+                mock_frequency_domain_features,
+                ["device1"],
+                ["condition1", "condition2"]
+            )
+            plot_works = True
+        except:
+            plot_works = False
+        
+        self.assertTrue(plot_works)
+
+#############################################################################################################################
+
+    @patch('plotly.graph_objs.Figure.show', MagicMock())  # Mocking fig.show() to prevent actual display
+    @patch('IPython.display.display', MagicMock())  # Mocking display function to prevent actual display
+    def test_radar_plot(self):
+        # Create mock time_domain_features for testing
+        mock_time_domain_features = {
+            "criterion_device": {
+                "condition1": {"rmssd": 50, "pnni_50": 20, "mean_hr": 70, "sdnn": 30},
+                "condition2": {"rmssd": 55, "pnni_50": 22, "mean_hr": 72, "sdnn": 32}
+            },
+            "device1": {
+                "condition1": {"rmssd": 52, "pnni_50": 21, "mean_hr": 71, "sdnn": 31},
+                "condition2": {"rmssd": 56, "pnni_50": 23, "mean_hr": 73, "sdnn": 33}
+            }
+        }
+
+        # Check if the function runs without any errors
+        try:
+            individual.radar_plot(
+                mock_time_domain_features,
+                "criterion_device",
+                ["device1"],
+                ["condition1", "condition2"]
+            )
+            plot_works = True
+        except Exception as e:
+            print(e)
+            plot_works = False
+
+        self.assertTrue(plot_works)
+
+#############################################################################################################################
+
+    @patch('IPython.display.display', MagicMock())  # Mocking display function to prevent actual display
+    @patch('IPython.display.Markdown', MagicMock())  # Mocking Markdown function to prevent actual display
+    def test_display_changes(self):
+        # Create mock features for testing
+        mock_time_domain_features = {
+            "Device1": {
+                "Condition1": {"rmssd": 50, "mean_hr": 70},
+                "Condition2": {"rmssd": 55, "mean_hr": 75}
+            },
+            "Device2": {
+                "Condition1": {"rmssd": 45, "mean_hr": 65},
+                "Condition2": {"rmssd": 50, "mean_hr": 70}
+            }
+        }
+        
+        mock_frequency_domain_features = {
+            "Device1": {"Condition1": {"hf": 20}, "Condition2": {"hf": 25}},
+            "Device2": {"Condition1": {"hf": 15}, "Condition2": {"hf": 20}}
+        }
+        
+        # Check if the function runs without any errors
+        try:
+            individual.display_changes(
+                mock_time_domain_features,
+                mock_frequency_domain_features,
+                ["Device1", "Device2"],
+                ["Condition1", "Condition2"]
+            )
+            display_works = True
+        except Exception as e:
+            print(e)
+            display_works = False
+
+        self.assertTrue(display_works)
+
+#############################################################################################################################
+
+    @patch('pandas.DataFrame.to_csv', autospec=True)  # Mocking to_csv method to prevent actual file save
+    def test_save_data(self, mock_to_csv):
+        # Create mock data for testing
+        mock_time_domain_features = {
+            'Device1': {'Condition1': {'rmssd': 50, 'mean_hr': 70}, 'Condition2': {'rmssd': 55, 'mean_hr': 75}},
+            'Device2': {'Condition1': {'rmssd': 45, 'mean_hr': 65}, 'Condition2': {'rmssd': 50, 'mean_hr': 70}}
+        }
+
+        mock_frequency_domain_features = {
+            'Device1': {'Condition1': {'hf': 20}, 'Condition2': {'hf': 25}},
+            'Device2': {'Condition1': {'hf': 15}, 'Condition2': {'hf': 20}}
+        }
+
+        mock_artefact = {'Device1': {'Condition1': 0, 'Condition2': 1}, 'Device2': {'Condition1': 2, 'Condition2': 3}}
+
+        # Call the function
+        df_all = individual.save_data(
+            pp='Participant1',
+            path='./',
+            time_domain_features=mock_time_domain_features,
+            frequency_domain_features=mock_frequency_domain_features,
+            data_pp=None,
+            devices=['Device1', 'Device2'],
+            conditions=['Condition1', 'Condition2'],
+            events={'timestamp': [1609459200]},
+            artefact=mock_artefact,
+            save_as_csv=True
+        )
+
+        # Assert that the returned DataFrame contains the expected columns
+        expected_columns = ['rmssd', 'mean_hr', 'hf', 'artefact', 'nibi_before_cropping', 'nibi_after_cropping', 'conditions', 'device', 'pp', 'time']
+        self.assertListEqual(list(df_all.columns), expected_columns)
+
+        # Assert that to_csv was called if save_as_csv=True
+        mock_to_csv.assert_called_once()
+
+#############################################################################################################################
+
 if __name__ == '__main__':
     unittest.main()
