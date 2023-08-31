@@ -236,6 +236,7 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
 
                 # If the decision is to exclude and exclude==True, replace all feature values for that participant and condition with empty lists
                 if decision == "Poor" and exclude == True:
+                    print ("Outliers are excluded from the data!")
                     for feature in features:
                         data[device][feature][condition][pp] = []
 
