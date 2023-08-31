@@ -1,3 +1,4 @@
+import pdb
 import sys
 sys.path.append(r"C:\Users\msi401\OneDrive - Vrije Universiteit Amsterdam\PhD\Data\Coding\Validation Study\wearable-hrv")
 import unittest
@@ -8,7 +9,7 @@ import time
 import pickle
 import tkinter as tk
 import hrvanalysis
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
@@ -131,9 +132,10 @@ class TestGroup(unittest.TestCase):
         os.remove(test_file_path)
 
 
-#############################################################################################################################
+##############################################################################################################################
+    
     def test_signal_quality(self):
-        # Prepare a sample data dictionary, which should resemble your actual data structure
+        # Loading the original dataset
         sample_data, file_names = group.import_data (path, self.conditions, self.devices, self.features)
         
         # Execute the function
@@ -146,20 +148,160 @@ class TestGroup(unittest.TestCase):
         self.assertIsInstance(new_data, dict)
         self.assertIsInstance(new_features, list)
 
-        # Test if 'artefact' and 'nibi_after_cropping' are removed from the features
+        # Test if 'artefact' and 'nibi_after_cropping' are removed from the features and the data
         self.assertNotIn('artefact', new_features)
         self.assertNotIn('nibi_after_cropping', new_features)
 
-        # Test if the data dictionary is updated correctly (this will depend on your thresholds and conditions)
-        self.assertEqual(new_data["vu"]["nibi_after_cropping"]["sitting"]["P01.csv"], [0.9])  
+        self.assertNotIn('nibi_after_cropping', new_data["vu"])
+        self.assertNotIn('artefact', new_data["vu"])
 
-        # Test for messages (this will require patching the print function)
-        with patch('builtins.print') as mocked_print:
-            group.signal_quality(
-                deepcopy(sample_data), self.path, self.conditions, self.devices,
-                self.features, self.criterion, ["P01.csv", "P02.csv"]
-            )
-            mocked_print.assert_any_call('Data Saved Succesfully!')
+        # Test if the data dictionary is updated correctly 
+        self.assertEqual(sample_data['rhythm']['rmssd']['standing']['P05.csv'], [48.39451400218052]) # before excluding
+        self.assertEqual(new_data['rhythm']['rmssd']['standing']['P05.csv'], [])                  # after excluding 
+ 
+        # Test if the CSV file is created
+        test_file_1 = path + "quality_report1.csv"
+        test_file_2 = path + "quality_report2.csv"
+        self.assertTrue(os.path.exists(test_file_1))
+        self.assertTrue(os.path.exists(test_file_2))
+
+        # Test the content of the CSV file
+        saved_data_1 = pd.read_csv(test_file_1)
+        saved_data_2 = pd.read_csv(test_file_2)
+        self.assertEqual(saved_data_1["Decision"].tolist()[81], 'Missing')
+        self.assertEqual(saved_data_2["Acceptable"].tolist()[0:4], [0, 0, 4, 3])
+
+        # Remove the test CSV file
+        os.remove(test_file_1)
+        os.remove(test_file_2)
+
+##############################################################################################################################
+  
+    def test_violin_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(path, self.conditions, self.devices, self.features)
+
+        with patch('plotly.graph_objects.Figure.show', MagicMock()):  # Mocking fig.show() to prevent actual plot display
+            with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                    try:
+                        group.violin_plot(
+                            mock_data,
+                            self.conditions,
+                            self.features,
+                            self.devices
+                        )
+                        plot_works = True
+                    except:
+                        plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+
+    def test_box_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+
+        with patch('plotly.graph_objects.Figure.show', MagicMock()):  # Mocking fig.show() to prevent actual plot display
+            with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                    try:
+                        group.box_plot(
+                            mock_data,
+                            self.conditions,
+                            self.features,
+                            self.devices
+                        )
+                        plot_works = True
+                    except:
+                        plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+    
+    def test_radar_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+
+        with patch('plotly.graph_objects.Figure.show', MagicMock()):  # Mocking fig.show() to prevent actual plot display
+            with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                    try:
+                        group.radar_plot(
+                            mock_data,
+                            self.criterion,
+                            self.conditions,
+                            self.features,
+                            self.devices
+                        )
+                        plot_works = True
+                    except:
+                        plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+
+    def test_hist_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+
+        with patch('plotly.graph_objects.Figure.show', MagicMock()):  # Mocking fig.show() to prevent actual plot display
+            with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                    try:
+                        group.hist_plot(
+                            mock_data,
+                            self.conditions,
+                            self.features,
+                            self.devices
+                        )
+                        plot_works = True
+                    except:
+                        plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+    
+    def test_matrix_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+        mock_data = group.nan_handling (mock_data, self.devices, self.features, self.conditions) # This function is sensitive to NaN values, that's why I am first taking care of them
+
+
+        with patch.object(plt, 'show', MagicMock()):  # Mocking plt.show() to prevent actual plot display
+            with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                    try:
+                        group.matrix_plot(
+                            mock_data,
+                            file_names,
+                            self.conditions,
+                            self.features,
+                            self.devices
+                        )
+                        plot_works = True
+                    except:
+                        plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+
+
+
+
+
+
+
 
 
 
@@ -172,4 +314,22 @@ if __name__ == '__main__':
 
 
 
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    unittest.main()
