@@ -4,6 +4,7 @@ sys.path.append(r"C:\Users\msi401\OneDrive - Vrije Universiteit Amsterdam\PhD\Da
 import unittest
 from wearablehrv import group
 import pandas as pd
+import pingouin as pg
 import os
 import time
 import pickle
@@ -13,6 +14,7 @@ from unittest.mock import patch, MagicMock, PropertyMock
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
+import seaborn as sns
 from ipywidgets import Dropdown, IntText, Output, HBox
 from IPython.display import display, clear_output
 from copy import deepcopy
@@ -296,35 +298,191 @@ class TestGroup(unittest.TestCase):
 
 ##############################################################################################################################
 
+    def test_density_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+
+        with patch.object(plt, 'show', MagicMock()):  # Mocking plt.show() to prevent actual plot display
+            with patch.object(sns, 'kdeplot', MagicMock()):  # Mocking sns.kdeplot to prevent actual plot display
+                with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                    with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                        try:
+                            group.density_plot(
+                                mock_data,
+                                file_names,
+                                self.conditions,
+                                self.features,
+                                self.devices
+                            )
+                            plot_works = True
+                        except:
+                            plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+
+    def test_bar_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+
+        with patch('plotly.graph_objects.Figure.show', MagicMock()):  # Mocking fig.show() to prevent actual plot display
+            with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                    try:
+                        group.bar_plot(
+                            mock_data,
+                            self.conditions,
+                            self.features,
+                            self.devices
+                        )
+                        plot_works = True
+                    except:
+                        plot_works = False
+
+        self.assertTrue(plot_works)
+
+##############################################################################################################################
+
+    def test_regression_analysis_behavior(self):
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+        mock_data = group.nan_handling (mock_data, self.devices, self.features, self.conditions) # This function is sensitive to NaN values, that's why I am first taking care of them
+        new_features = ["rmssd", "hf",'pnni_50','mean_hr','sdnn']
+
+        # Run the function
+        regression_data = group.regression_analysis(mock_data, self.criterion, self.conditions, self.devices, new_features, self.path, save_as_csv=True)
+
+        # Check that the regression_data dictionary has the expected shape and keys
+        self.assertIn("vu", regression_data)
+        self.assertIn("rmssd", regression_data["vu"])
+        self.assertIn("sitting", regression_data["vu"]["rmssd"])
+        self.assertIn("slope", regression_data["vu"]["rmssd"]["sitting"])
+
+        # Test the data integrity (this is tested against Jamovi 2.3.21, Regression Analysis)
+        self.assertEqual(round (regression_data["heartmath"]["rmssd"]["breathing"]["slope"], 2), [1.21])
+        self.assertEqual(round (regression_data["heartmath"]["rmssd"]["breathing"]["intercept"], 2), [-14.46])
+        self.assertEqual(round (regression_data["heartmath"]["rmssd"]["breathing"]["r_value"], 2), [0.95])
+        self.assertLess(regression_data["heartmath"]["rmssd"]["breathing"]["p_value"], 0.001)
+        self.assertEqual(round (regression_data["heartmath"]["rmssd"]["breathing"]["std_err"], 2), [0.13])
+
+        # Test if the CSV file is created
+        test_file_regression = path + "regression_data.csv"
+        self.assertTrue(os.path.exists(test_file_regression))
+        
+
+        # Test the content of the CSV file
+        saved_data = pd.read_csv(test_file_regression)
+        self.assertEqual(saved_data["Intercept"].tolist()[58], 3.105166301568409)
+
+        # Remove the test CSV file
+        os.remove(test_file_regression)
+
+##############################################################################################################################
+    
+    def test_regression_plot(self):
+
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+        mock_data = group.nan_handling (mock_data, self.devices, self.features, self.conditions) # This function is sensitive to NaN values, that's why I am first taking care of them
+        new_features = ["rmssd", "hf",'pnni_50','mean_hr','sdnn']
+        regression_data = group.regression_analysis(mock_data, self.criterion, self.conditions, self.devices, new_features, self.path, save_as_csv=False) # Assuming you have this function
+
+        with patch.object(plt, 'show', MagicMock()):  # Mocking plt.show() to prevent actual plot display
+            with patch.object(plt, 'scatter', MagicMock()):  # Mocking plt.scatter to prevent actual plot display
+                with patch.object(plt, 'plot', MagicMock()):  # Mocking plt.plot to prevent actual plot display
+                    with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
+                        with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
+                            try:
+                                group.regression_plot(
+                                    regression_data,
+                                    mock_data,
+                                    self.criterion,
+                                    self.conditions,
+                                    self.devices,
+                                    self.features
+                                )
+                                plot_works = True
+                            except:
+                                plot_works = False
+
+        self.assertTrue(plot_works)
 
 
+##############################################################################################################################
 
+    def test_icc_analysis(self):
+        
+        # Create mock data dictionary for the test
+        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+        mock_data = group.nan_handling (mock_data, self.devices, self.features, self.conditions) # This function is sensitive to NaN values, that's why I am first taking care of them
+        new_features = ["rmssd", "hf",'pnni_50','mean_hr','sdnn']
+        icc_data = group.icc_analysis(mock_data, self.criterion, self.devices, self.conditions, new_features, self.path, save_as_csv=True)
 
+        # Verify that the function output matches expected values (These are tested against SPSS 28.0.0.0)
+        # In SPSS > Analyze > Scale > Reliability Analysis > Items: heartmath_rmssd_sitting, vu_rmssd_sitting > Statistics: ICC is ticked > ModeL: Two-Way Mixed, Type: Absolute Agreement
 
+        self.assertEqual(round(icc_data['heartmath']['rmssd']['sitting']['ICC'][1], 3), 0.664)
+        self.assertEqual(round(icc_data['heartmath']['rmssd']['sitting']['df1'][1], 3), 9)
+        self.assertEqual(round(icc_data['heartmath']['rmssd']['sitting']['pval'][1], 3), 0.002)
+        self.assertEqual(icc_data['heartmath']['rmssd']['sitting']['CI95%'][1][0], 0.02)
+        self.assertEqual(icc_data['heartmath']['rmssd']['sitting']['CI95%'][1][1], 0.91)
 
+        self.assertEqual(round(icc_data['heartmath']['rmssd']['sitting']['ICC'][4], 3), 0.798)
+        self.assertEqual(round(icc_data['heartmath']['rmssd']['sitting']['df1'][4], 3), 9)
+        self.assertEqual(round(icc_data['heartmath']['rmssd']['sitting']['pval'][4], 3), 0.002)
+        self.assertEqual(icc_data['heartmath']['rmssd']['sitting']['CI95%'][4][0], 0.04)
+        self.assertEqual(icc_data['heartmath']['rmssd']['sitting']['CI95%'][4][1], 0.95)
 
+        # this works very well even when there are excluding cases (in terms of Kyto for instance, 4 excluded cases):
+        self.assertEqual(round(icc_data['kyto']['rmssd']['sitting']['ICC'][1], 3), 0.84)
+        self.assertEqual(round(icc_data['kyto']['rmssd']['sitting']['df1'][1], 3), 5)
+        self.assertLess(round(icc_data['kyto']['rmssd']['sitting']['pval'][1], 3),  0.001)
+        self.assertEqual(icc_data['kyto']['rmssd']['sitting']['CI95%'][1][0], -0.06)
+        self.assertEqual(icc_data['kyto']['rmssd']['sitting']['CI95%'][1][1], 0.98)
 
+        self.assertEqual(round(icc_data['kyto']['rmssd']['sitting']['ICC'][4], 3), 0.913)
+        self.assertEqual(round(icc_data['kyto']['rmssd']['sitting']['df1'][4], 3), 5)
+        self.assertLess(round(icc_data['kyto']['rmssd']['sitting']['pval'][4], 3),  0.001)
+        self.assertEqual(icc_data['kyto']['rmssd']['sitting']['CI95%'][4][0], -0.12)
+        self.assertEqual(icc_data['kyto']['rmssd']['sitting']['CI95%'][4][1], 0.99)
 
+        # Check if the CSV file is created
+        test_file_icc = path + "icc_data.csv"
+        self.assertTrue(os.path.exists(test_file_icc))
 
+        # Test the content of the CSV file 
+        saved_data = pd.read_csv(test_file_icc)
+        self.assertEqual(saved_data["p-value"].tolist()[774], 0.0818837510509474)
+            
+        # Remove the test CSV file
+        os.remove(test_file_icc)
 
+##############################################################################################################################
 
-if __name__ == '__main__':
-    unittest.main()
+def test_icc_plot(self):
+    mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
+    mock_data = group.nan_handling(mock_data, self.devices, self.features, self.conditions)  # This function is sensitive to NaN values, that's why I am first taking care of them
+    new_features = ["rmssd", "hf", 'pnni_50', 'mean_hr', 'sdnn']
+    mock_icc_data = group.icc_analysis(mock_data, self.criterion, self.devices, self.conditions, new_features, self.path, save_as_csv=False)
+    
+    with patch.object(sns, 'heatmap', MagicMock()):  # Mock sns.heatmap to prevent actual plot display
+        with patch.object(plt, 'show', MagicMock()):  # Mock plt.show() to prevent actual plot display
+            with patch.object(plt, 'figure', MagicMock()):  # Mock plt.figure() to prevent actual plot display
+                with patch('ipywidgets.Output', MagicMock()):  # Mock the Output widget to prevent actual display
+                    with patch('IPython.display.display', MagicMock()):  # Mock the display function to prevent actual display
+                        try:
+                            group.icc_plot(mock_icc_data, self.conditions, self.devices, new_features)
+                            plot_works = True
+                        except Exception as e:
+                            print(f"An error occurred: {e}")
+                            plot_works = False
 
+    self.assertTrue(plot_works)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+##############################################################################################################################
 
 
 
