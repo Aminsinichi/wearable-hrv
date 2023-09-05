@@ -30,7 +30,7 @@ class TestGroup(unittest.TestCase):
         self.criterion = "vu"
         self.conditions = ['sitting', 'arithmetic', 'recovery', 'standing', 'breathing', 
                             'neurotask', 'walking', 'biking']
-        self.devices = ["vu", "empatica", "heartmath", "kyto", "rhythm"]
+        self.devices = ["empatica", "heartmath", "kyto", "rhythm", "vu"]
         self.features = ["rmssd", "hf",'pnni_50','mean_hr','sdnn', 'nibi_after_cropping', 'artefact']
 
 #############################################################################################################################
@@ -159,7 +159,7 @@ class TestGroup(unittest.TestCase):
 
         # Test if the data dictionary is updated correctly 
         self.assertEqual(sample_data['rhythm']['rmssd']['standing']['P05.csv'], [48.39451400218052]) # before excluding
-        self.assertEqual(new_data['rhythm']['rmssd']['standing']['P05.csv'], [])                  # after excluding 
+        self.assertEqual(new_data['rhythm']['rmssd']['standing']['P05.csv'], []) # after excluding 
  
         # Test if the CSV file is created
         test_file_1 = path + "quality_report1.csv"
@@ -374,8 +374,8 @@ class TestGroup(unittest.TestCase):
         
 
         # Test the content of the CSV file
-        saved_data = pd.read_csv(test_file_regression)
-        self.assertEqual(saved_data["Intercept"].tolist()[58], 3.105166301568409)
+        saved_data_regression = pd.read_csv(test_file_regression)
+        self.assertEqual(saved_data_regression["Intercept"].tolist()[58], 3.105166301568409)
 
         # Remove the test CSV file
         os.remove(test_file_regression)
@@ -454,8 +454,8 @@ class TestGroup(unittest.TestCase):
         self.assertTrue(os.path.exists(test_file_icc))
 
         # Test the content of the CSV file 
-        saved_data = pd.read_csv(test_file_icc)
-        self.assertEqual(saved_data["p-value"].tolist()[774], 0.0818837510509474)
+        saved_data_icc = pd.read_csv(test_file_icc)
+        self.assertEqual(saved_data_icc["p-value"].tolist()[774], 0.0818837510509474)
             
         # Remove the test CSV file
         os.remove(test_file_icc)
@@ -483,7 +483,6 @@ def test_icc_plot(self):
     self.assertTrue(plot_works)
 
 ##############################################################################################################################
-
 
 
 

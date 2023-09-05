@@ -26,12 +26,12 @@ class TestIndividual(unittest.TestCase):
         self.criterion = "vu"
         self.conditions = ['sitting', 'arithmetic', 'recovery', 'standing', 'breathing', 
                            'neurotask', 'walking', 'biking']
-        self.devices = ["vu", "empatica", "heartmath", "kyto", "rhythm"]
+        self.devices = ["empatica", "heartmath", "kyto", "rhythm", "vu"]
 
 #############################################################################################################################
 
     def test_define_events_read(self):
-        events = individual.define_events(self.path, self.pp, self.conditions, already_saved=True, save_as_csv=False)
+        events = individual.define_events(self.path, self.pp, self.conditions, already_saved=True, save_as_csv=True)
         
         # Assert that the output is a DataFrame
         self.assertIsInstance(events, pd.DataFrame)
@@ -43,6 +43,11 @@ class TestIndividual(unittest.TestCase):
         # Assert that the conditions in the DataFrame match the expected conditions
         unique_conditions = events['conditions'].unique()
         self.assertListEqual(sorted(unique_conditions), sorted(self.conditions))
+
+        # Test the content of the CSV file
+        test_file_events = path + self.pp + "_events.csv"
+        saved_data_events = pd.read_csv(test_file_events)
+        self.assertEqual(saved_data_events["timestamp"].tolist()[0], "14:09:20")
 
     @patch('tkinter.Tk.mainloop', MagicMock(side_effect=[None]))  # Mocking the mainloop to exit immediately
     def test_define_events_gui(self):
@@ -72,6 +77,10 @@ class TestIndividual(unittest.TestCase):
             expected_columns = ['timestamp', 'rr']
             self.assertListEqual(list(df.columns), expected_columns)
 
+        # Test the data integrity 
+        self.assertEqual(data["empatica"]["rr"][20], [944])
+        self.assertEqual(data["vu"]["rr"][20], [1017])
+
 #############################################################################################################################
 
     def test_chop_data(self):
@@ -94,6 +103,12 @@ class TestIndividual(unittest.TestCase):
                 self.assertIsInstance(df, pd.DataFrame)
                 expected_columns = ['timestamp', 'rr']
                 self.assertListEqual(list(df.columns), expected_columns)
+
+
+        # Test the data integrity 
+        self.assertEqual (data_chopped["vu"]["sitting"]["rr"].iloc[0], 1137)
+        self.assertEqual (data_chopped["heartmath"]["standing"]["rr"].iloc[10], 992)
+
 
 #############################################################################################################################
     
@@ -118,6 +133,10 @@ class TestIndividual(unittest.TestCase):
             for condition, ibi_count in conditions_dict.items():
                 expected_ibi_count = len(data_chopped[device][condition])
                 self.assertEqual(ibi_count, expected_ibi_count)
+
+        # Test the data integrity (confirmed by manually checking the excel output)
+        self.assertEqual (nibis["kyto"]["sitting"], 280)
+        self.assertEqual (nibis["rhythm"]["biking"], 251)
 
 #############################################################################################################################
 
