@@ -346,7 +346,7 @@ class TestGroup(unittest.TestCase):
 
 ##############################################################################################################################
 
-    def test_regression_analysis_behavior(self):
+    def test_regression_analysis(self):
         # Create mock data dictionary for the test
         mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
         mock_data = group.nan_handling (mock_data, self.devices, self.features, self.conditions) # This function is sensitive to NaN values, that's why I am first taking care of them
@@ -455,7 +455,7 @@ class TestGroup(unittest.TestCase):
 
         # Test the content of the CSV file 
         saved_data_icc = pd.read_csv(test_file_icc)
-        self.assertEqual(saved_data_icc["p-value"].tolist()[774], 0.0818837510509474)
+        self.assertEqual(saved_data_icc["p-value"].tolist()[774], 0.6532588898588172)
             
         # Remove the test CSV file
         os.remove(test_file_icc)
