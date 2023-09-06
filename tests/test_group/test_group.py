@@ -30,7 +30,7 @@ class TestGroup(unittest.TestCase):
         self.criterion = "vu"
         self.conditions = ['sitting', 'arithmetic', 'recovery', 'standing', 'breathing', 
                             'neurotask', 'walking', 'biking']
-        self.devices = ["empatica", "heartmath", "kyto", "rhythm", "vu"]
+        self.devices = ["vu", "empatica", "heartmath", "kyto", "rhythm"]
         self.features = ["rmssd", "hf",'pnni_50','mean_hr','sdnn', 'nibi_after_cropping', 'artefact']
 
 #############################################################################################################################
@@ -455,7 +455,7 @@ class TestGroup(unittest.TestCase):
 
         # Test the content of the CSV file 
         saved_data_icc = pd.read_csv(test_file_icc)
-        self.assertEqual(saved_data_icc["p-value"].tolist()[774], 0.6532588898588172)
+        self.assertEqual(saved_data_icc["p-value"].tolist()[774], 0.0818837510509474)
             
         # Remove the test CSV file
         os.remove(test_file_icc)
