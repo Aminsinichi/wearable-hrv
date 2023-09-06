@@ -215,6 +215,10 @@ class TestIndividual(unittest.TestCase):
 
 #############################################################################################################################
 
+    # For pre-processing and analysis of inter-beat intervals, we utilize the hrv-analysis Python package. 
+    # Below, I will test whether the integrated function works correctly. For a more comprehensive test, please refer to the following:
+    # https://github.com/Aura-healthcare/hrv-analysis/blob/master/tests/tests_preprocessing_methods.py
+    
     def test_pre_processing(self):
         # Create mock data_chopped dictionary
         mock_data = {
@@ -242,9 +246,6 @@ class TestIndividual(unittest.TestCase):
         self.assertNotIn(None, data_pp["device1"]["condition1"])  # Check NaN interpolation
 
 #############################################################################################################################
-
-# for a more complete test check out the following: 
-# https://github.com/Aura-healthcare/hrv-analysis/blob/master/tests/tests_preprocessing_methods.py
 
     def test_calculate_artefact(self):
         # Create mock data_chopped and data_pp dictionaries
@@ -305,15 +306,19 @@ class TestIndividual(unittest.TestCase):
 
 #############################################################################################################################
 
-    # tests for validity of the calculations of the hrvanalysis python module can be find here:
+    # Tests to validate the calculations of the hrv-analysis Python module can be found here:
     # https://github.com/Aura-healthcare/hrv-analysis/blob/master/tests/tests_extract_features_methods.py
-    # here we only test if our function implementation works properly
+    # Here, we are solely testing the proper functionality of our function implementation.
 
     def test_data_analysis(self):
         # Create mock data_pp dictionary
         mock_data_pp = {
             "device1": {
-                "condition1": [1000, 1100, 1200, 1300, 1400]
+                "condition1": [800, 750, 820, 810, 790, 820, 805, 795, 810, 825,
+                815, 805, 790, 800, 820, 815, 790, 810, 825, 805,
+                800, 810, 790, 820, 805, 800, 810, 790, 800, 825,
+                815, 810, 790, 820, 800, 795, 810, 825, 805, 810,
+                820, 790, 800, 810, 795, 815, 825, 800, 810, 790]
             }
         }
 
@@ -331,14 +336,19 @@ class TestIndividual(unittest.TestCase):
         self.assertIn("device1", frequency_domain_result)
         self.assertIn("condition1", frequency_domain_result["device1"])
 
-        # Verify some expected keys in the results (depending on what the hrvanalysis package returns)
-        expected_time_domain_keys = ["mean_nni", "sdnn", "sdsd"]
+        # Verify all expected keys in the results (depending on what the hrvanalysis package returns)
+        expected_time_domain_keys = ['mean_nni', 'sdnn', 'sdsd', 'nni_50', 'pnni_50', 'nni_20', 'pnni_20', 'rmssd', 'median_nni', 'range_nni', 'cvsd', 'cvnni', 'mean_hr', 'max_hr', 'min_hr', 'std_hr']
         for key in expected_time_domain_keys:
             self.assertIn(key, time_domain_result["device1"]["condition1"])
 
-        expected_frequency_domain_keys = ["lf", "hf", "lf_hf_ratio"]
+        expected_frequency_domain_keys = ['lf', 'hf', 'lf_hf_ratio', 'lfnu', 'hfnu', 'total_power', 'vlf']
         for key in expected_frequency_domain_keys:
             self.assertIn(key, frequency_domain_result["device1"]["condition1"])
+
+        # Test data integrity (Tested Against Kubios HRV Standard 3.5.0)
+        self.assertEqual (round (time_domain_result["device1"]["condition1"]['mean_nni']), 806)
+        self.assertEqual (round (time_domain_result["device1"]["condition1"]['mean_hr']), 74)
+        self.assertEqual (round (time_domain_result["device1"]["condition1"]['rmssd']), 21)
 
 #############################################################################################################################
 
