@@ -1240,27 +1240,36 @@ def icc_analysis (data, criterion, devices, conditions, features, path, save_as_
 ###########################################################################
 ###########################################################################
 
-def icc_plot (icc_data, conditions, devices, features):
+def icc_plot(icc_data, conditions, devices, features, font_size=12, cmap="coolwarm"):
 
     """
-    This function creates an interactive heatmap plot for ICC values of each device compared to the criterion device, for each condition and feature.
+    This function creates an interactive heatmap plot for ICC values of each device compared to the criterion device, 
+    for each condition and feature. The heatmap provides both the ICC values and their corresponding 95% confidence intervals.
 
     Parameters:
     -----------
     icc_data : dict
-        A nested dictionary containing the ICC results for each device, feature, and condition.
+        A nested dictionary containing the ICC results (ICC value and 95% confidence interval) for each device, feature, and condition.
     conditions : list
         A list of strings representing the different experimental conditions of the data.
     devices : list
-        A list of strings representing the different devices used to collect the data.
+        A list of strings representing the different devices used to collect the data. The last device is assumed to be the criterion device.
     features : list
         A list of strings representing the different features of the data.
+    font_size : int, optional, default: 12
+        The font size for labels, titles, and annotations.
+    cmap : str, optional, default: "coolwarm"
+        The color map to be used for the heatmap. This should be a valid matplotlib or seaborn colormap string.
 
     Returns:
     --------
     None
-    """
 
+    Note:
+    The function displays an interactive dropdown widget for feature selection and renders the heatmap based on the selected feature.
+    """
+    plt.rcParams.update({'font.size': font_size})
+    
     def plot_icc_heatmap(feature):
         icc_matrix = []
         ci95_matrix = []
@@ -1286,15 +1295,15 @@ def icc_plot (icc_data, conditions, devices, features):
         icc_df = pd.DataFrame(icc_matrix, columns=devices[:-1], index=conditions)
 
         plt.figure(figsize=(10, 6))
-        ax = sns.heatmap(icc_df, annot=True, fmt=".2f", cmap="coolwarm", cbar_kws={'label': f'ICC1 - {feature.upper()}'})
-
+        ax = sns.heatmap(icc_df, annot=True, fmt=".2f", cmap=cmap, cbar_kws={'label': f'ICC1 - {feature.upper()}'})
+        
         for i, condition in enumerate(conditions):
             for j, device in enumerate(devices[:-1]):
                 ci95_lower, ci95_upper = ci95_matrix[i][j]
                 if ci95_lower is not None and ci95_upper is not None:
                     annotation = f"[{ci95_lower:.2f}, {ci95_upper:.2f}]"
-                    t = ax.text(j + 0.5, i + 0.3, annotation, ha='center', va='top', color='black', fontsize=9, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.2'))
-                    t.set_bbox(dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.2', alpha=0.5))
+                    ax.text(j + 0.5, i + 0.7, annotation, ha='center', va='center', color='black', 
+                            fontsize=font_size - 2, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.2', alpha=0.5))
 
         plt.xlabel("Devices")
         plt.ylabel("Conditions")
@@ -1304,7 +1313,6 @@ def icc_plot (icc_data, conditions, devices, features):
 
     def update_icc_heatmap(*args):
         feature = feature_dropdown.value
-
         with out:
             clear_output(wait=True)
             plot_icc_heatmap(feature)
