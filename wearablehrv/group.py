@@ -936,10 +936,13 @@ def regression_analysis (data, criterion, conditions, devices, features, path, s
 ###########################################################################
 ###########################################################################
 
-def regression_plot (regression_data, data, criterion, conditions, devices, features, width=20, height=20):
-
+def regression_plot(regression_data, data, criterion, conditions, devices, features,
+                           width=15, height_per_condition=4, 
+                           regression_line_style='-', regression_line_color='black', 
+                           marker_color='gray', font_size=12, 
+                           show_grid=True, background_color=None):
     """
-    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, and significance values.
+    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, significance values, and the number of observations.
 
     Parameters:
     -----------
@@ -955,65 +958,96 @@ def regression_plot (regression_data, data, criterion, conditions, devices, feat
         A list of strings representing the different devices used to collect the data.
     features : list
         A list of strings representing the different features of the data.
-    width : int, optional, default: 20
+    width : int, optional, default: 15
         The width of the scatter plot in inches.
-    height : int, optional, default: 20
-        The height of the scatter plot in inches.
+    height_per_condition : int, optional, default: 4
+        The height of each subplot (per condition) in inches.
+    regression_line_style : str, optional, default: '-'
+        The line style for the regression line.
+    regression_line_color : str, optional, default: 'black'
+        The color of the regression line.
+    marker_color : str, optional, default: 'gray'
+        The color of the data point markers.
+    font_size : int, optional, default: 12
+        The font size for labels, titles, etc.
+    show_grid : bool, optional, default: True
+        Whether to display gridlines on the plot.
+    background_color : str, optional
+        Background color for the plot, if specified.
 
     Returns:
     --------
     None
     """
+    plt.rcParams.update({'font.size': font_size})
+    
+    def create_scatter_plots(device, feature):
+        num_conditions = len(conditions)
+        fig, axs = plt.subplots(num_conditions, 1, figsize=(width, height_per_condition*num_conditions))
+        
+        # Make sure axs is always a list, even if there's only one condition
+        if num_conditions == 1:
+            axs = [axs]
+        
+        for c, condition in enumerate(conditions):
+            device_data = data[device][feature][condition]
+            criterion_data = data[criterion][feature][condition]
 
-    def create_scatter_plots(feature):
-        fig, axs = plt.subplots(len(conditions), len(devices) - 1, figsize=(width, height))
+            filtered_data_device = []
+            filtered_data_criterion = []
 
-        for d, device in enumerate(devices[:-1]):
-            for c, condition in enumerate(conditions):
-                # Check for matching values between the criterion and device
-                device_data = data[device][feature][condition]
-                criterion_data = data[criterion][feature][condition]
+            for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+                if pp_value_device and pp_value_criterion:
+                    filtered_data_device.append(pp_value_device[0])
+                    filtered_data_criterion.append(pp_value_criterion[0])
 
-                filtered_data_device = []
-                filtered_data_criterion = []
+            slope = regression_data[device][feature][condition]['slope']
+            intercept = regression_data[device][feature][condition]['intercept']
+            r_value = regression_data[device][feature][condition]['r_value']
+            p_value = regression_data[device][feature][condition]['p_value']
 
-                for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
-                    if pp_value_device and pp_value_criterion:
-                        filtered_data_device.append(pp_value_device[0])
-                        filtered_data_criterion.append(pp_value_criterion[0])
-
-                slope = regression_data[device][feature][condition]['slope']
-                intercept = regression_data[device][feature][condition]['intercept']
-                r_value = regression_data[device][feature][condition]['r_value']
-                p_value = regression_data[device][feature][condition]['p_value']
-
-                axs[c, d].scatter(filtered_data_device, filtered_data_criterion, alpha=0.8)
-                axs[c, d].set_xlabel(device)
-                axs[c, d].set_ylabel(criterion)
-
-                # Add the regression line to the plot
-                x = np.array(filtered_data_device)
-                axs[c, d].plot(x, intercept + slope * x, 'r', label='y={:.2f}x+{:.2f}'.format(slope, intercept))
-
-                # Add the correlation coefficient and significance to the plot
-                axs[c, d].annotate(f"r = {r_value:.2f}, p = {p_value:.2f}", (0.05, 0.9), xycoords='axes fraction')
-
-                # Setting title for each row and for columns
-                axs[c, 0].set_ylabel(condition.capitalize(), fontsize=15, rotation=0, ha='right', labelpad=80, c='r')
-
-        for d, device in enumerate(devices[:-1]):
-            axs[0, d].set_title(feature.capitalize() + "  " + device.capitalize() + " - " + criterion.capitalize(), fontsize=15, y=1.1, c='b')
-
+            axs[c].scatter(filtered_data_device, filtered_data_criterion, alpha=0.8, color=marker_color)
+            axs[c].set_xlabel(device if c == num_conditions - 1 else "")
+            axs[c].set_ylabel(criterion if c == 0 else "")
+            axs[c].set_title(condition.capitalize(), loc='left', fontsize=12)
+            
+            # Regression line
+            x = np.array(filtered_data_device)
+            axs[c].plot(x, intercept + slope * x, regression_line_style, color=regression_line_color, 
+                        label='y={:.2f}x+{:.2f}'.format(slope, intercept))
+            
+            # Correlation coefficient and significance
+            n = len(filtered_data_device)  # Number of observations
+            axs[c].annotate(f"r = {r_value:.2f}, p = {p_value:.2f}, n = {n}", (0.05, 0.9), xycoords='axes fraction')
+            
+            # Optional Grid
+            if show_grid:
+                axs[c].grid(True, which='both', linestyle='--', linewidth=0.5)
+            
+            # Background color
+            if background_color:
+                axs[c].set_facecolor(background_color)
+        
+        fig.suptitle(f"Regression between {device.capitalize()} and {criterion.capitalize()} for {feature.capitalize()}", 
+                     fontsize=16 + 2, y=1.02)
         plt.tight_layout()  # to avoid overlaps
         plt.show()
 
     def update_scatter_plots(*args):
+        device = device_dropdown.value
         feature = feature_dropdown.value
 
         with out:
             clear_output(wait=True)
-            create_scatter_plots(feature)
+            create_scatter_plots(device, feature)
 
+    device_dropdown = widgets.Dropdown(
+        options=devices[:-1],  # excluding the criterion device
+        value=devices[0],
+        description='Device:',
+        disabled=False,
+    )
+    
     feature_dropdown = widgets.Dropdown(
         options=features,
         value=features[0],
@@ -1021,10 +1055,11 @@ def regression_plot (regression_data, data, criterion, conditions, devices, feat
         disabled=False,
     )
 
+    device_dropdown.observe(update_scatter_plots, names='value')
     feature_dropdown.observe(update_scatter_plots, names='value')
 
     out = widgets.Output()
-    display(feature_dropdown, out)
+    display(widgets.VBox([device_dropdown, feature_dropdown, out]))
     update_scatter_plots()
 
 ###########################################################################
