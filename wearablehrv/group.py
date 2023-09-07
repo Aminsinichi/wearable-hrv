@@ -9,10 +9,12 @@ import os
 import pandas as pd
 import pingouin as pg
 import numpy as np
+from scipy import stats
 import seaborn as sns
 import statsmodels.api as sm
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
 import plotly.express as px
 import ipywidgets as widgets
 from scipy.stats import linregress
@@ -1417,71 +1419,145 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
 ###########################################################################
 ###########################################################################
 
-def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, features, width=20, height=20):
-
+def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, features, 
+                         width=10, height_per_plot=5, agreement_bound=1.96, confidenceInterval=95, 
+                         percentage=False, mean_diff_color='#FF6347', boundary_color='#20B2AA', pointColour='#8B008B', shade=True):
+    # To create this plot, some ideas come from this python package: https://github.com/jaketmp/pyCompare/blob/main/pyCompare/_plotBlandAltman.py
     """
-    This function creates Bland-Altman plots (mean-difference plots) for each device compared to the criterion device, for each condition and feature.
-
+    Generates Bland-Altman plots for data comparison between devices and a criterion.
+    
     Parameters:
     -----------
-    blandaltman_data : dict
-        A nested dictionary containing the Bland-Altman results for each device, feature, and condition.
-    data : dict
-        A nested dictionary containing the data for each device, feature, and condition.
-    criterion : str
-        A string representing the name of the criterion device.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    features : list
-        A list of strings representing the different features of the data.
-    width : int, optional, default=20
-        The width of the entire plot figure.
-    height : int, optional, default=20
-        The height of the entire plot figure.
-
+    blandaltman_data: dict
+        The Bland-Altman data.
+    
+    data: dict
+        The main data containing measurement values from various devices.
+        
+    criterion: str
+        The name of the criterion device against which comparisons are made.
+        
+    conditions: list
+        List of conditions under which measurements were taken.
+        
+    devices: list
+        List of measurement devices including the criterion device.
+        
+    features: list
+        List of features or metrics being measured.
+        
+    width: int, optional, default=10
+        Width of the entire plot.
+        
+    height_per_plot: int, optional, default=5
+        Height of each individual subplot.
+        
+    agreement_bound: float, optional, default=1.96
+        Multiplier for the standard deviation to determine limits of agreement.
+        
+    confidenceInterval: float, optional, default=95
+        Confidence interval percentage for shading (if applied).
+        
+    percentage: bool, optional, default=False
+        If True, plots differences as percentages. Otherwise, plots raw differences.
+        
+    mean_diff_color: str, optional, default='#FF6347'
+        Color used for the mean difference line.
+        
+    boundary_color: str, optional, default='#20B2AA'
+        Color used for the upper and lower limits of agreement lines.
+        
+    pointColour: str, optional, default='#8B008B'
+        Color used for the individual data points.
+        
+    shade: bool, optional, default=True
+        If True, shades the confidence interval around the mean and limits of agreement.
+        
     Returns:
     --------
     None
-
-    This function displays Bland-Altman plots using interactive widgets. The user can select the feature of interest to visualize the Bland-Altman plots.
+        The function displays the Bland-Altman plots and doesn't return any value.
+        
+    Note:
+    -----
+    This function generates Bland-Altman plots for each combination of device (excluding the criterion) 
+    and feature, under each condition. The plots include the mean difference (bias) and the upper and 
+    lower limits of agreement, and optionally the shaded confidence intervals.
     """
+    
+    sns.set(style="whitegrid", rc={"grid.linewidth": 0.5, 'grid.color': '.7', 'ytick.major.size': 5, 'axes.edgecolor': '.3'})
+    plt.rcParams['figure.facecolor'] = 'white'
 
-    def create_mean_difference_plots(feature):
-        fig, axs = plt.subplots(len(conditions), len(devices) - 1, figsize=(width, height))
+    def create_blandaltman_plots(feature, device):
+        fig, axs = plt.subplots(len(conditions), 1, figsize=(width, height_per_plot * len(conditions)))
 
-        for d, device in enumerate(devices[:-1]):
-            for c, condition in enumerate(conditions):
-                device_data = data[device][feature][condition]
-                criterion_data = data[criterion][feature][condition]
+        for c, condition in enumerate(conditions):
+            device_data = data[device][feature][condition]
+            criterion_data = data[criterion][feature][condition]
 
-                filtered_data_device = []
-                filtered_data_criterion = []
+            filtered_data_device = []
+            filtered_data_criterion = []
 
-                for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
-                    if pp_value_device and pp_value_criterion:
-                        filtered_data_device.append(pp_value_device[0])
-                        filtered_data_criterion.append(pp_value_criterion[0])
+            for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+                if pp_value_device and pp_value_criterion:
+                    filtered_data_device.append(pp_value_device[0])
+                    filtered_data_criterion.append(pp_value_criterion[0])
 
-                sm.graphics.mean_diff_plot(np.array(filtered_data_device), np.array(filtered_data_criterion), ax=axs[c, d])
+            # Convert lists to numpy arrays and sort them
+            filtered_data_device = np.array(filtered_data_device)
+            filtered_data_criterion = np.array(filtered_data_criterion)
 
-                # Setting title for each row
-                axs[c, 0].set_ylabel(condition.capitalize(), fontsize=15, rotation=0, ha='right', labelpad=80, c='r')
+            mean_diff_pairs = sorted(zip(np.mean([filtered_data_device, filtered_data_criterion], axis=0), 
+                                        ((filtered_data_device - filtered_data_criterion) / np.mean([filtered_data_device, filtered_data_criterion], axis=0)) * 100 if percentage else filtered_data_device - filtered_data_criterion))
+            mean_vals, diff_vals = zip(*mean_diff_pairs)
 
-        for d, device in enumerate(devices[:-1]):
-            axs[0, d].set_title(feature.capitalize() + " - " + device.capitalize() + " - " + criterion.capitalize(), fontsize=15, y=1.1, c='b')
-            axs[0, d].set_title(feature.capitalize() + " - " + device.capitalize() + " - " + criterion.capitalize(), fontsize=15, y=1.1, c='b')
+            md = np.mean(diff_vals)
+            sd = np.std(diff_vals, axis=0)
 
-        plt.tight_layout()  # to avoid overlaps
+            loa_upper = md + agreement_bound * sd
+            loa_lower = md - agreement_bound * sd
+
+            # Plot the data
+            axs[c].scatter(mean_vals, diff_vals, alpha=0.5, c=pointColour)
+            axs[c].axhline(md, color=mean_diff_color, linestyle='--')
+            axs[c].axhline(loa_upper, color=boundary_color, linestyle='--')
+            axs[c].axhline(loa_lower, color=boundary_color, linestyle='--')
+
+            if shade:
+                # Add shading for confidence intervals
+                z_value = stats.norm.ppf((1 + (confidenceInterval / 100)) / 2.)
+                se_loa = sd * np.sqrt((1/len(diff_vals)) + (4/2/len(diff_vals)))
+                loa_range = z_value * se_loa
+                
+                axs[c].fill_between(mean_vals, md + loa_range, md - loa_range, color=mean_diff_color, alpha=0.2)
+                axs[c].fill_between(mean_vals, loa_upper + loa_range, loa_upper - loa_range, color=boundary_color, alpha=0.2)
+                axs[c].fill_between(mean_vals, loa_lower + loa_range, loa_lower - loa_range, color=boundary_color, alpha=0.2)
+
+            # Right-side annotations
+            trans = transforms.blended_transform_factory(axs[c].transAxes, axs[c].transData)
+            offset = (loa_upper - loa_lower) * 0.02  # 2% of range for offset
+
+            axs[c].text(1.02, md, f'Mean\n{md:.2f}', ha="left", va="center", transform=trans, color=mean_diff_color)
+            axs[c].text(1.02, loa_upper, f'+{agreement_bound:.2f} SD\n{loa_upper:.2f}', ha="left", va="center", transform=trans, color=boundary_color)
+            axs[c].text(1.02, loa_lower, f'-{agreement_bound:.2f} SD\n{loa_lower:.2f}', ha="left", va="center", transform=trans, color=boundary_color)
+
+            axs[c].set_title(f'{condition.capitalize()}', fontsize=14, color='black', loc='left')
+
+            if c == len(conditions) - 1:
+                axs[c].set_xlabel(f'Mean of {device} and {criterion}', fontsize=12)
+            axs[c].set_ylabel('Difference', fontsize=12)
+
+        fig.suptitle(f'Bland-Altman Plot for {feature.capitalize()} - {device.capitalize()} vs. {criterion.capitalize()}', fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 0.95, 0.95])
         plt.show()
 
-    def update_mean_difference_plots(*args):
+    def update_blandaltman_plots(*args):
         feature = feature_dropdown.value
+        device = device_dropdown.value
 
         with out:
             clear_output(wait=True)
-            create_mean_difference_plots(feature)
+            create_blandaltman_plots(feature, device)
 
     feature_dropdown = widgets.Dropdown(
         options=features,
@@ -1490,11 +1566,19 @@ def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, fe
         disabled=False,
     )
 
-    feature_dropdown.observe(update_mean_difference_plots, names='value')
+    device_dropdown = widgets.Dropdown(
+        options=devices[:-1],
+        value=devices[0],
+        description='Device:',
+        disabled=False,
+    )
+
+    feature_dropdown.observe(update_blandaltman_plots, names='value')
+    device_dropdown.observe(update_blandaltman_plots, names='value')
 
     out = widgets.Output()
-    display(feature_dropdown, out)
-    update_mean_difference_plots()
+    display(widgets.VBox([feature_dropdown, device_dropdown, out]))
+    update_blandaltman_plots()
 
 ###########################################################################
 ###########################################################################
