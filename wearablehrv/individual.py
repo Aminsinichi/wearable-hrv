@@ -29,6 +29,32 @@ from avro.io import DatumReader
 ###########################################################################
 
 def labfront_conversion (path, pp, file_name, device_name, date):
+
+    """
+    Converts Labfront data into a standardized CSV format, filtering by a specific date.
+
+    This function processes CSV data from Labfront. It first reads the data, then focuses on 
+    the 'isoDate' and 'bbi' columns. The data is then filtered based on the provided date, and 
+    relevant columns are renamed for standardization. The processed data is then saved into a new CSV file.
+
+    Parameters:
+    -----------
+    path : str
+        The directory path pointing to the location of the Labfront data.
+    pp : str
+        The unique ID of the participant for which the data is being processed.
+    file_name : str
+        The name of the Labfront file (with its extension) to be processed.
+    device_name : str
+        The name of the device used to collect the data. This will be used in the resulting CSV's filename.
+    date : str
+        The specific date for which data should be extracted, provided in a format that can be parsed by pandas' to_datetime function (e.g., 'YYYY-MM-DD').
+
+    Returns:
+    --------
+    None. The function saves the output directly to a CSV file in the specified path.
+    """
+
     labfront = pd.read_csv (path+file_name, skiprows=5)
     # convert isoDate to datetime column
     labfront['isoDate'] = pd.to_datetime(labfront['isoDate'])
@@ -45,6 +71,32 @@ def labfront_conversion (path, pp, file_name, device_name, date):
 ###########################################################################
 
 def empatica_conversion (path, pp):
+    
+    """
+    Converts Empatica data from Avro format into a CSV file, focusing on the 'systolicPeaks' field.
+
+    This function processes data files associated with a participant's Empatica device data stored 
+    in Avro format. It specifically reads the 'systolicPeaks' field from these Avro files. 
+    The extracted peak times (in nanoseconds) are converted to milliseconds, and the interbeat 
+    intervals (IBIs) are then calculated. The resulting data is saved to a CSV file.
+
+    Parameters:
+    -----------
+    path : str
+        The directory path pointing to the location of the participant's Empatica data.
+    pp : str
+        The unique ID of the participant whose Empatica data is to be converted.
+
+    Note:
+    -----
+    The expected directory structure is: 
+    <path>/<participant_id>_empatica/raw_data/v6
+    with Avro files containing the 'systolicPeaks' field.
+
+    Returns:
+    --------
+    None. The function saves the output directly to a CSV file in the specified path.
+    """
 
     avrofiles_path = path + "/" +  pp + "_empatica" + "/raw_data"  + "/v6"
     file_name = "empatica"
@@ -232,21 +284,28 @@ def define_events(path, pp, conditions, already_saved= True, save_as_csv= False)
 def import_data (path, pp, devices):
 
     """
-    This function imports the data from different devices for a specific participant.
+    Imports participant-specific data from different devices and consolidates them into a dictionary.
+
+    This function processes data files associated with different devices. For the "vu" device, it 
+    specifically reads from a text file exported from VU-DAMS. Other devices' data are expected in CSV format,
+    often recorded using HRV Logger. It's noteworthy that, for HRV Logger, if there's an unnecessary third 
+    column in the data, it will be dropped.
 
     Parameters:
     -----------
     path : str
-        The path to the directory where the data files are stored.
+        The directory path where the data files corresponding to the participant are located.
     pp : str
-        The ID of the participant whose data is being imported.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
+        The unique ID of the participant whose data is to be imported.
+    devices : list of str
+        Names of devices from which the data has been collected. Data from each device is expected to be 
+        in a file named in the format: <participant_id>_<device_name>.<appropriate_extension>.
 
     Returns:
     --------
     data : dict
-        A dictionary that contains the data from all devices for the participant.
+        A dictionary wherein each key is a device name and the associated value is a DataFrame containing 
+        the data from that device for the specified participant.
     """
 
     data = {device: {} for device in devices} #creating an empty dictionary to store data from all devices
