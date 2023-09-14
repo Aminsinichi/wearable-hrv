@@ -6,11 +6,8 @@
 # website: http://jupyter.org/
 
 
-documentation.ipynb
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
-testdata/
-testdoc.ipynb
 
 # IPython
 profile_default/
