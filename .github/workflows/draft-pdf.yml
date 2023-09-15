@@ -12,7 +12,7 @@ jobs:
         uses: openjournals/openjournals-draft-action@master
         with:
           journal: joss
-          paper-path: wearable-hrv/paper/paper.md
+          paper-path: paper/paper.md
       
       - name: Upload
         uses: actions/upload-artifact@v1
