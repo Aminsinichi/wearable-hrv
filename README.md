@@ -1,6 +1,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
+[![Current version at PyPI](https://img.shields.io/pypi/v/wearablehrv.svg)](https://pypi.org/project/wearablehrv/)
+![Supported Python Versions](https://img.shields.io/pypi/pyversions/wearablehrv.svg)
+![Last Commit](https://img.shields.io/github/last-commit/Aminsinichi/wearable-hrv)
+[![Twitter Follow](https://img.shields.io/twitter/follow/AminSinichi.svg?style=social)](https://twitter.com/AminSinichi)
 
 `wearablehrv` is an open-source Python package tailored for data preparation, pre-processing, feature extraction, comparison, visualization, and both individual and group statistical analyses of heart rate and heart rate variability metrics from wearable devices that transmit raw inter-beat intervals and timestamps. The inclusion of graphical user interfaces in most functions grants researchers the flexibility to easily switch between experimental conditions and devices. This offers versatility in validating an unlimited number of wearables within a single experimental setting and under various conditions. The only required inputs for the pipeline are the inter-beat intervals and timestamps for each device; the rest is fully handled by the `wearablehrv` package. The main functionalities of this Python package are:
 
@@ -20,28 +23,32 @@
 
 # Documentation
 
-For an in-depth explanation of the package, please refer to [documentation.ipynb](link)
+For an in-depth explanation of the package and sample data, please refer to: 
+
+[![Documentation](https://img.shields.io/badge/Read-Documentation-blue)](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb)
 
 # Questions
 
 For any questions regarding the package, please contact:
-<aminsinichi@gmail.com>; <m.sinichi@vu.nl>
+
+- aminsinichi@gmail.com
+- m.sinichi@vu.nl
 
 # Dependencies
 
-### Standard Libraries
+**Standard Libraries**
 
 - [datetime](https://docs.python.org/3/library/datetime.html)
 - [os](https://docs.python.org/3/library/os.html)
 - [json](https://docs.python.org/3/library/json.html)
 - [pickle](https://docs.python.org/3/library/pickle.html)
 
-### Data Analysis & Manipulation
+**Data Analysis & Manipulation**
 
 - [pandas](https://pandas.pydata.org/)
 - [numpy](https://numpy.org/)
 
-### Visualization
+**Visualization**
 
 - [plotly](https://plotly.com/python/)
   - graph_objects
@@ -52,7 +59,7 @@ For any questions regarding the package, please contact:
   - transforms
 - [seaborn](https://seaborn.pydata.org/)
 
-### User Interface
+**User Interface**
 
 - [tkinter](https://docs.python.org/3/library/tkinter.html)
 - [ipywidgets](https://ipywidgets.readthedocs.io/en/latest/)
@@ -60,7 +67,7 @@ For any questions regarding the package, please contact:
 - [IPython](https://ipython.org/)
   - display, clear_output, Markdown
 
-### Statistical Analysis
+**Statistical Analysis**
 
 - [pingouin](https://pingouin-stats.org/)
 - [scipy](https://www.scipy.org/)
@@ -71,14 +78,14 @@ For any questions regarding the package, please contact:
 - [copy](https://docs.python.org/3/library/copy.html)
   - deepcopy
 
-### Heart Rate Variability Analysis
+**Heart Rate Variability Analysis**
 
 - [hrvanalysis](https://pypi.org/project/hrv-analysis/)
   - remove_outliers, remove_ectopic_beats, interpolate_nan_values
   - get_time_domain_features
   - get_frequency_domain_features
 
-### Data Serialization
+**Data Serialization**
 
 - [avro](https://avro.apache.org/)
   - datafile.DataFileReader
@@ -92,12 +99,11 @@ The package can be easily installed using `pip`:
 
 The repository can be cloned:
 
-    $ git clone https://github.com/
+    $ git clone https://github.com/Aminsinichi/wearable-hrv.git
 
 # GitHub
 
-<https://github.com/>
-
+https://github.com/Aminsinichi/wearable-hrv
 
 # Development
 
