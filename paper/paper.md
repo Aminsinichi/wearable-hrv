@@ -72,7 +72,13 @@ The data required for the pipeline should have its first column populated with U
 Either with a pre-specified .csv file (`already_saved= True`) or using the GUI (`already_saved= False`), the start and end of each experimental condition can be specified:
 
 ```python
-events = individual.define_events(path, pp, conditions, already_saved=True, save_as_csv=False)
+events = individual.define_events(
+path, 
+pp, 
+conditions, 
+already_saved=True, 
+save_as_csv=False
+)
 ```
 
 The continuous data from all devices can then be imported using the following function:
@@ -102,8 +108,21 @@ individual.visual_inspection (data_chopped, devices, conditions,criterion)
 Using the `hrv-analysis` python package [@Champseix2021], we can preprocess and extract all the time-domain and frequency-domain features for all devices and conditions in one go:
 
 ```python
-individual.pre_processing (data_chopped, devices, conditions, method="karlsson", custom_removing_rule = 0.25, low_rri=300, high_rri=2000)
-time_domain_features, frequency_domain_features = wearablehrv.individual.data_analysis (data_pp, devices, conditions)
+individual.pre_processing (
+data_chopped, 
+devices, 
+conditions, 
+method="karlsson", 
+custom_removing_rule = 0.25, 
+low_rri=300, 
+high_rri=2000
+)
+
+time_domain_features, frequency_domain_features = wearablehrv.individual.data_analysis (
+  data_pp, 
+  devices, 
+  conditions
+  )
 ```
 
 ### Plotting and Data Saving
@@ -119,7 +138,20 @@ There are various plotting options available to assist in comparing the criterio
 Once ready, all time and frequency features for every device and condition can be exported as a .csv file using the following function, to be later used in the `Group Pipeline`:
 
 ```python
-individual.save_data(pp, path, time_domain_features, frequency_domain_features, data_pp, devices, conditions, events, artefact=None, nibi_before_cropping=None, nibi_after_cropping=None, save_as_csv=False)
+individual.save_data(
+pp, 
+path, 
+time_domain_features, 
+frequency_domain_features, 
+data_pp, 
+devices, 
+conditions, 
+events, 
+artefact=None, 
+nibi_before_cropping=None, 
+nibi_after_cropping=None, 
+save_as_csv=False
+)
 ```
 
 ## Group Pipeline
@@ -135,7 +167,19 @@ data, file_names = group.import_data(path, conditions, devices, features)
 A significant advancement in wearable validation is the ability to identify the amount of missing data in each device, assess signal quality, and generate detailed reports. These reports can show, for each participant, device, and condition, the number of detected beats and artifacts. They can also provide a decision on whether to keep or exclude the data, along with a summary report displaying the total count and percentage of decisions ("Acceptable", "Poor", "Missing") for each device and condition. By setting arbitrary thresholds, all of these can be achieved using the following function:
 
 ```python
-data, features = group.signal_quality(data, path, conditions, devices, features, criterion, file_names, exclude=False, save_as_csv=False, ibi_threshold=0.40, artefact_threshold=0.20)
+data, features = group.signal_quality(
+data, 
+path, 
+conditions, 
+devices, 
+features, 
+criterion, 
+file_names, 
+exclude=False, 
+save_as_csv=False, 
+ibi_threshold=0.40, 
+artefact_threshold=0.20
+)
 ```
 
 ### Various Plotting Options
@@ -158,23 +202,68 @@ The core objective is to establish the validity of the wearables in comparison t
 #### Regression Analysis
 
 ```python
-regression_data = group.regression_analysis(data, criterion, conditions, devices, features, path, save_as_csv=True)
-group.regression_plot(regression_data, data, criterion, conditions, devices, features, width=20, height=20)
+regression_data = group.regression_analysis(
+data, 
+criterion, 
+conditions, 
+devices, 
+features, 
+path, 
+save_as_csv=True
+)
+
+group.regression_plot(
+regression_data, 
+data, criterion, 
+conditions, 
+devices, 
+features, 
+width=20, 
+height=20
+)
+
 group.heatmap_plot(data, criterion, devices, conditions, features)
 ```
 
 #### Intraclass Correlation Coefficient (ICC)
 
 ```python
-icc_data = group.icc_analysis(data, criterion, devices, conditions, features, path, save_as_csv=False)
+icc_data = group.icc_analysis(
+data, 
+criterion, 
+devices, 
+conditions, 
+features, 
+path, 
+save_as_csv=False
+)
+
 group.icc_plot(icc_data, conditions, devices, features)
 ```
 
 #### Bland-Altman Analysis
 
 ```python
-blandaltman_data = group.blandaltman_analysis(data, criterion, devices, conditions, features, path, save_as_csv=False)
-group.blandaltman_plot(blandaltman_data, data, criterion, conditions, devices, features, width=20, height=20)
+blandaltman_data = group.blandaltman_analysis(
+data, 
+criterion, 
+devices, 
+conditions, 
+features, 
+path, 
+save_as_csv=False
+)
+
+group.blandaltman_plot(
+blandaltman_data, 
+data, 
+criterion, 
+conditions, 
+devices, 
+features, 
+width=20, 
+height=20
+)
 ```
 
 # Acknowledgements
