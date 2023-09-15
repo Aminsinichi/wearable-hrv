@@ -1,0 +1,12 @@
+pandas
+numpy
+plotly
+matplotlib
+ipywidgets
+IPython
+hrv-analysis
+avro-python3
+pingouin
+seaborn
+statsmodels
+scipy
