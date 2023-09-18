@@ -54,6 +54,8 @@ One potential reason the validity of these wearables is often overlooked might b
 
 In this section, we offer a brief overview of the primary functions and workflow of `wearablehrv`. For detailed documentation of all the functions and examples on data recording and initiating validation, please refer to [README.md](https://github.com/Aminsinichi/wearable-hrv/blob/develop/README.md) and [documentation.ipynb](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb). The pipeline is divided into two parts: individual and group:
 
+![A summary of the the main functionalities of wearablehrv Python package.](main_plot.png)
+
 ```python
 from wearablehrv import individual
 from wearablehrv import group
