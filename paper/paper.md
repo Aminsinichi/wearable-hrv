@@ -40,236 +40,44 @@ Acknowledgement of any financial support. -->
 
 # Summary
 
-Wearable devices that enable us to monitor our physiology have become an integral part of our lives, and the market for these devices is rapidly expanding with new brands and products. Among their various features, heart rate (HR) and heart rate variability (HRV) are particularly interesting, not only for users but also for researchers. However, the question arises: how accurate are these wearables in capturing such sensitive data that require millisecond precision?
+Wearable devices that monitor physiology have become ubiquitous, and include smart watches, smart jewelry, and smart textiles. The market for these devices is rapidly expanding with new brands and products. These devices measure a variety of signals, which are translated into a large amount of different features, of which heart rate (HR) and heart rate variability (HRV) are among the most common. These features are particularly interesting , not only for consumers but also to researchers, because they are predictive of mental and physical health outcomes, and easily obtained. However, for manufacturers there may be a trade-off between user acceptability on one hand and accuracy on the other, where profit margins typically turn out to be the decisive factor. Therefore the following question continually comes up: is the cardiac data recorded by this new watch/ring/shirt accurate enough to use in research?
 
-The `wearablehrv` is a Python package offers a comprehensive pipeline for validating the accuracy of HR and HRV measurements and it facilitates the process of turning raw data into advanced statistical analyses for device agreement. The package's graphical user interface allows for effortless visualization, pre-processing, and data analysis at both individual and group levels. To start, one can use a basic criterion electrocardiograph (ECG) device, such as a chest strap, to compare against the device of interest under various conditions. Researchers have the flexibility to test multiple devices against a single criterion simultaneously. The only required inputs for the pipeline are the inter-beat intervals (IBIs) and timestamps for each device; the rest is fully handled by the `wearablehrv` package.
+The `wearablehrv` Python package offers a comprehensive pipeline for validating the accuracy of HR and HRV measurements. It allows for advanced statistical analyses on device agreement from beat-to-beat cardiac data. The package's graphical user interface facilitates pre-processing, visualization, and data analysis at both individual and group levels. As input, a user of `wearablehrv` should use a criterion device, preferably an electrocardiograph (ECG). Simultaneously acquired data from the device(s) of interest can then be compared against the criterion. The only required inputs for the pipeline are the inter-beat intervals (IBIs) and timestamps for each device; the rest is fully handled by the `wearablehrv` package.
 
-# Statement of need
+# Statement of Need
 
-The use of wearables in psychophysiology and sports sciences has exponentially increased over the past decade. Many of these devices measure HR and HRV using the Photoplethysmography (PPG) technique that measures the changes in blood volume in peripheral tissues (e.g., earlobe, wrist, arm, fingertip) and substitutes these pulses for the actual contraction of ventricular muscles[@challoner_photoelectric_1974]. Although the PPG method is promising and versatile, it raises concerns regarding its validity. Several studies have highlighted concerns about the validity of wearables in identifying HR and HRV, especially when the user is in motion [@hill_ethnic_2015;@pinheiro_can_2016;@quintana_guidelines_2016;@nederend_impedance_2017;@allen_photoplethysmography_2007;@schafer_how_2013;@stone_assessing_2021;@bent_investigating_2020].
+The use of wearables in psychophysiology and sports sciences has exponentially increased over the past decade. While the golden standard is electrocardiography, for prolonged monitoring many studies use  devices which measure HR and HRV using Photoplethysmography (PPG). This technique optically measures the changes in blood volume in peripheral tissues (e.g., earlobe, wrist, arm, fingertip) and substitutes detected pulses for the actual contraction of cardiac ventricular muscles[@challoner_photoelectric_1974]. Although the PPG method is promising and versatile, several studies have highlighted concerns about its validity in identifying HR and HRV, especially when the user is in motion [@hill_ethnic_2015;@pinheiro_can_2016;@quintana_guidelines_2016;@nederend_impedance_2017;@allen_photoplethysmography_2007;@schafer_how_2013;@stone_assessing_2021;@bent_investigating_2020].
 
-One potential reason the validity of these wearables is often overlooked might be the absence of an integrated and user-friendly validation pipeline. Such a tool would guide users from raw data collection through advanced statistical analysis to assess device agreement. The `wearablehrv` package was developed to address this gap. Provided that a wearable device (either PPG or ECG) transfers the IBIs alongside timestamps, this Python package makes it feasible to establish the validity of a wearable in just a few steps. In summary, `wearablehrv` is a Python package tailored for data preparation, pre-processing, feature extraction, comparison, visualization, and both individual and group statistical analyses of heart rate and heart rate variability metrics from wearable devices that transmit raw IBIs and timestamps. The inclusion of graphical user interfaces (GUI) in most functions grants researchers the flexibility to easily switch between experimental conditions and devices. This offers versatility in validating an unlimited number of wearables within a single experimental setting and under various conditions.
+The oversight of these wearables' validity may stem from the absence of an integrated and user-friendly way to assess the validity of novel wearables. A validation pipeline would guide users from raw data collection through pre-processing and advanced statistical analyses to arrive at the necessary parameters and visualizations necessary to assess device agreement. The `wearablehrv` package was developed to address this gap. Provided that a wearable device (either PPG or ECG) allows for export of the complete time series of recorded IBIs, this Python package makes it relatively easy to establish the validity of a novel wearable in just a few steps. In summary, `wearablehrv` is a Python package tailored for data preparation, pre-processing, feature extraction, comparison, visualization, and both individual and group statistical analyses of heart rate and heart rate variability metrics from wearable devices that transmit raw IBIs and timestamps. The inclusion of graphical user interfaces (GUI) in most functions grants researchers and wearable users the flexibility in validating an unlimited number of wearables across a range of conditions.
 
 # Main Features and Basic Usage
 
-In this section, we offer a brief overview of the primary functions and workflow of `wearablehrv`. For detailed documentation of all the functions and examples on data recording and initiating validation, please refer to [README.md](https://github.com/Aminsinichi/wearable-hrv/blob/develop/README.md) and [documentation.ipynb](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb). The pipeline is divided into two parts: individual and group:
+In this section, we provide an overview of the main functions and basic usage of the `wearablehrv` pipeline. For detailed documentation of all the functions and examples on data recording and initiating validation, please refer to [README.md](https://github.com/Aminsinichi/wearable-hrv/blob/develop/README.md) and [documentation.ipynb](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb).
+
+The pipeline is divided into individual and group pipelines to cater to single-individual data and combined data from a study, respectively.
 
 ![A summary of the the main functionalities of wearablehrv Python package.](main_plot.png)
 
-```python
-from wearablehrv import individual
-from wearablehrv import group
-```
+The individual pipeline allows for the validation of a wearable of interest against a criterion device (e.g., an ECG) under unlimited conditions. Data necessary for the pipeline should be in a .csv file with UNIX timestamps (specified in milliseconds) and IBIs, in two separate columns. For defining events and importing recorded data, the pipeline can be initiated with the `define_events` function, either by referencing a pre-specified .csv file or by using the GUI. The `import_data` function is then used to bring the continuous time series from all devices into the pipeline. Data segmentation into smaller, condition-specific chunks is achieved with the `chop_data` function.
 
-## Individual Pipeline
-
-In the individual pipeline, one can establish and compare the validity of a wearable of interest against a criterion device (e.g., an ECG) for a single case. This comparison can be conducted under just one condition (e.g., sitting rest) or an unlimited number of both laboratory and ambulatory conditions.
-
-### Recording Data and Getting Started
-
-The data required for the pipeline should have its first column populated with UNIX timestamps with millisecond precision, and the second column should contain IBIs. Once this continuous recording is saved as a .csv file using the `[participant ID]_[device name].csv` format, and once preliminary variables are specified (e.g., conditions, participantID, devices), the rest of the process is seamlessly managed by the pipeline.
-
-### Defining Events and Importing the Recorded Raw Data
-
-Either with a pre-specified .csv file (`already_saved= True`) or using the GUI (`already_saved= False`), the start and end of each experimental condition can be specified:
-
-```python
-events = individual.define_events(
-path, 
-pp, 
-conditions, 
-already_saved=True, 
-save_as_csv=False
-)
-```
-
-The continuous data from all devices can then be imported using the following function:
-
-```python
-data = individual.import_data(path, pp, devices)
-```
-
-Finally, the continuous data can be segmented into smaller chunks according to the specified experimental conditions, for all devices at once:
-
-```python
-data_chopped = individual.chop_data(data, conditions, events, devices)
-```
-
-### Visually Inspecting the Signal
-
-One of the primary strengths of `wearablehrv` is its ability to allow researchers to visualize the IBI signals from all devices against the criterion device across all conditions simultaneously. This addresses a prevalent challenge in the field – correcting the lag between devices. With the assistance of the GUI, adjusting for this lag becomes straightforward using the following function:  
-
-```python
-individual.visual_inspection (data_chopped, devices, conditions,criterion)
-```
+One of the primary strengths of `wearablehrv` is the `visual_inspection` function, which allows for simultaneous visualization of IBI signals and addresses the challenge of correcting devices lag when their internal clocks are not in sync. With the assistance of the GUI, adjusting for this lag becomes straightforward.
 
 ![The black line shows the IBIs of the criterion device (ECG). The red line represents the IBIs of a given PPG device. By toggling the `Device` and `Conditions` widgets, one can easily explore other devices and conditions. The `Lag` slider allows for lag correction between the devices, and it is possible to crop a part of the signal if necessary.](visual_inspection.png)
 
-### Pre-processing and Features Extraction
+Pre-processing and feature extraction are streamlined using the `pre_processing` function and the `data_analysis` function from the `hrv-analysis` python package[@Champseix2021], outputting time domain and frequency domain features for all devices and conditions.
 
-Using the `hrv-analysis` python package [@Champseix2021], we can preprocess and extract all the time-domain and frequency-domain features for all devices and conditions in one go:
+To facilitate comparing the criterion device with the device of interest and visualization of results, several plotting functions are provided, including `result_comparison_plot`, `bar_plot`, `line_plot`, `radar_plot`, and `unfolding_plot`. All time and frequency features for every device and condition can be exported for later use in the `Group Pipeline` via the `save_data` function.
 
-```python
-individual.pre_processing (
-data_chopped, 
-devices, 
-conditions, 
-method="karlsson", 
-custom_removing_rule = 0.25, 
-low_rri=300, 
-high_rri=2000
-)
+Moving to group-level analysis, the `import_data` function of the group module aggregates individual case analyses. A significant advancement in wearable validation is the ability to identify the amount of missing, poor and acceptable data in each device, and generate detailed reports. The `signal_quality` function allows for such signal quality assessment across devices and participants, providing detailed reports for informed decision-making.
 
-time_domain_features, frequency_domain_features = wearablehrv.individual.data_analysis (
-  data_pp, 
-  devices, 
-  conditions
-  )
-```
-
-### Plotting and Data Saving
-
-There are various plotting options available to assist in comparing the criterion device with a specific device. These include:
-
-- `individual.result_comparison_plot()`
-- `individual.bar_plot()`
-- `individual.line_plot()`
-- `individual.radar_plot()`
-- `individual.unfolding_plot()`
-
-Once ready, all time and frequency features for every device and condition can be exported as a .csv file using the following function, to be later used in the `Group Pipeline`:
-
-```python
-individual.save_data(
-pp, 
-path, 
-time_domain_features, 
-frequency_domain_features, 
-data_pp, 
-devices, 
-conditions, 
-events, 
-artefact=None, 
-nibi_before_cropping=None, 
-nibi_after_cropping=None, 
-save_as_csv=False
-)
-```
-
-## Group Pipeline
-
-To establish the validity of the devices in terms of their HRV and HR features at the group level, the following function can be used. This function imports all individual cases previously analyzed using the `Individual Pipeline` for further analysis:
-
-```python
-data, file_names = group.import_data(path, conditions, devices, features)
-```
-
-### Signal Quality Check
-
-A significant advancement in wearable validation is the ability to identify the amount of missing data in each device, assess signal quality, and generate detailed reports. These reports can show, for each participant, device, and condition, the number of detected beats and artifacts. They can also provide a decision on whether to keep or exclude the data, along with a summary report displaying the total count and percentage of decisions ("Acceptable", "Poor", "Missing") for each device and condition. By setting arbitrary thresholds, all of these can be achieved using the following function:
-
-```python
-data, features = group.signal_quality(
-data, 
-path, 
-conditions, 
-devices, 
-features, 
-criterion, 
-file_names, 
-exclude=False, 
-save_as_csv=False, 
-ibi_threshold=0.40, 
-artefact_threshold=0.20
-)
-```
-
-### Various Plotting Options
-
-Subsequent to data processing, one can visualize the entirety of data for all cases, conditions, and devices using various of interactive plotting methods and GUI functionalities. The suite of available functions includes:
-
-- `group.violin_plot()`
-- `group.box_plot()`
-- `group.radar_plot()`
-- `group.hist_plot()`
-- `group.matrix_plot()`
-- `group.density_plot()`
+For visualization across the aggregated dataset, the group module offers `violin_plot`, `box_plot`, `radar_plot`, `hist_plot`, `matrix_plot`, and `density_plot`.
 
 ![An example of the radar plot at the group level, illustrating a comparison between a criterion device and a specified device for `pnni_50`, `rmssd`, `sdnss` (all distinct extracted features for HRV), and mean heart rate (`mean_hr`). Utilizing the `Device` and `Condition` widgets facilitates easy transitioning between a multitude of devices and conditions.](radar_plot.png)
 
-### Main Statistical Analysis
-
-The core objective is to establish the validity of the wearables in comparison to a criterion device. This validation can be accomplished using the main methods designed for evaluating the agreement between two devices: regression analysis, intraclass correlation coefficient (ICC), and Bland-Altman analysis. Moreover, visualization for each method is possible:
-
-#### Regression Analysis
-
-```python
-regression_data = group.regression_analysis(
-data, 
-criterion, 
-conditions, 
-devices, 
-features, 
-path, 
-save_as_csv=True
-)
-
-group.regression_plot(
-regression_data, 
-data, criterion, 
-conditions, 
-devices, 
-features, 
-width=20, 
-height=20
-)
-
-group.heatmap_plot(data, criterion, devices, conditions, features)
-```
-
-#### Intraclass Correlation Coefficient (ICC)
-
-```python
-icc_data = group.icc_analysis(
-data, 
-criterion, 
-devices, 
-conditions, 
-features, 
-path, 
-save_as_csv=False
-)
-
-group.icc_plot(icc_data, conditions, devices, features)
-```
-
-#### Bland-Altman Analysis
-
-```python
-blandaltman_data = group.blandaltman_analysis(
-data, 
-criterion, 
-devices, 
-conditions, 
-features, 
-path, 
-save_as_csv=False
-)
-
-group.blandaltman_plot(
-blandaltman_data, 
-data, 
-criterion, 
-conditions, 
-devices, 
-features, 
-width=20, 
-height=20
-)
-```
+The culmination of the group pipeline involves the main statistical analyses — regression analysis, ICC, and Bland-Altman analysis — enabled by the `regression_analysis`, `icc_analysis`, and `blandaltman_analysis` functions, respectively. These are complemented by their corresponding plotting functions, allowing for a detailed and visual validation of the wearable devices against the criterion device.
 
 # Acknowledgements
 
-We acknowledge contributions from Dr. Denise J. van der Mee and [to be completed]
+We acknowledge contribution from Dr. Denise J. van der Mee and advices from Dr. Marco Altini.
 
 # References
