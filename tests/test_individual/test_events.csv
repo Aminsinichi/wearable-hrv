@@ -1,0 +1,17 @@
+timestamp,conditions,datapoint
+14:09:20,sitting,start
+14:14:20,sitting,end
+14:17:03,arithmetic,start
+14:20:03,arithmetic,end
+14:20:20,recovery,start
+14:23:20,recovery,end
+14:24:35,standing,start
+14:27:35,standing,end
+14:29:25,breathing,start
+14:32:25,breathing,end
+14:35:25,neurotask,start
+14:44:48,neurotask,end
+14:45:37,walking,start
+14:48:37,walking,end
+14:49:45,biking,start
+14:52:45,biking,end

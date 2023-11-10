@@ -9,13 +9,16 @@ import os
 import pandas as pd
 import pingouin as pg
 import numpy as np
+from scipy import stats
 import seaborn as sns
 import statsmodels.api as sm
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
 import plotly.express as px
 import ipywidgets as widgets
 from scipy.stats import linregress
+from copy import deepcopy
 from IPython.display import display, clear_output
 
 ###########################################################################
@@ -77,6 +80,43 @@ def import_data (path, conditions, devices, features):
 ###########################################################################
 ###########################################################################
 ###########################################################################
+
+def nan_handling (data, devices, features, conditions):
+    """
+    This function takes a nested dictionary containing the data and replaces [nan] values with an empty list [].
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data, with keys for devices, features, and conditions.
+    devices : list
+        A list of strings representing the different devices used to collect the data.
+    features : list
+        A list of strings representing the different features of the data.
+    conditions : list
+        A list of strings representing the different experimental conditions of the data.
+
+    Returns:
+    --------
+    new_data : dict
+        A nested dictionary with [nan] values replaced with [].
+    """
+    new_data = deepcopy(data)
+    for device in devices:
+        for feature in features:
+            for condition in conditions:
+                values = new_data[device][feature][condition]
+                for key, value in values.items():
+                    if isinstance(value, list) and len(value) == 1 and pd.isna(value[0]):
+                        new_data[device][feature][condition][key] = []
+    
+    print ("NaN values are removed from the data")
+    return new_data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
 
 def save_data (data, path, conditions, devices, features, file_names):
 
@@ -198,6 +238,7 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
 
                 # If the decision is to exclude and exclude==True, replace all feature values for that participant and condition with empty lists
                 if decision == "Poor" and exclude == True:
+                    print ("Outliers are excluded from the data!")
                     for feature in features:
                         data[device][feature][condition][pp] = []
 
@@ -820,7 +861,7 @@ def bar_plot (data, conditions, features, devices):
 ###########################################################################
 ###########################################################################
 
-def regression_analysis (data, criterion, conditions, devices, features):
+def regression_analysis (data, criterion, conditions, devices, features, path, save_as_csv=False):
 
     """
     This function performs linear regression analysis on the given data, conditions, features, and devices. It calculates the slope, intercept, r_value, p_value, and std_err for each device and criterion pair, feature, and condition.
@@ -871,16 +912,39 @@ def regression_analysis (data, criterion, conditions, devices, features):
                     regression_data[device][feature][condition] = None
 
     print("Done Successfully!")
+
+    if save_as_csv:
+        # Convert nested dictionary to a list of rows
+        rows = []
+        for device in regression_data:
+            for feature in regression_data[device]:
+                for condition in regression_data[device][feature]:
+                    row_data = regression_data[device][feature][condition]
+                    if row_data:
+                        rows.append([device, feature, condition, row_data['slope'], row_data['intercept'], row_data['r_value'], row_data['p_value'], row_data['std_err']])
+                    else:
+                        rows.append([device, feature, condition, None, None, None, None, None])
+
+        # Convert list of rows to DataFrame
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'Slope', 'Intercept', 'R Value', 'P Value', 'Std Err'])
+        
+        # Save DataFrame to CSV
+        df.to_csv(path + 'regression_data.csv', index=False)
+        print("CSV File is saved successfully")
+
     return regression_data
 
 ###########################################################################
 ###########################################################################
 ###########################################################################
 
-def regression_plot (regression_data, data, criterion, conditions, devices, features, width=20, height=20):
-
+def regression_plot(regression_data, data, criterion, conditions, devices, features,
+                           width=15, height_per_condition=4, 
+                           regression_line_style='-', regression_line_color='black', 
+                           marker_color='gray', font_size=12, 
+                           show_grid=True, background_color=None):
     """
-    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, and significance values.
+    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, significance values, and the number of observations.
 
     Parameters:
     -----------
@@ -896,65 +960,96 @@ def regression_plot (regression_data, data, criterion, conditions, devices, feat
         A list of strings representing the different devices used to collect the data.
     features : list
         A list of strings representing the different features of the data.
-    width : int, optional, default: 20
+    width : int, optional, default: 15
         The width of the scatter plot in inches.
-    height : int, optional, default: 20
-        The height of the scatter plot in inches.
+    height_per_condition : int, optional, default: 4
+        The height of each subplot (per condition) in inches.
+    regression_line_style : str, optional, default: '-'
+        The line style for the regression line.
+    regression_line_color : str, optional, default: 'black'
+        The color of the regression line.
+    marker_color : str, optional, default: 'gray'
+        The color of the data point markers.
+    font_size : int, optional, default: 12
+        The font size for labels, titles, etc.
+    show_grid : bool, optional, default: True
+        Whether to display gridlines on the plot.
+    background_color : str, optional
+        Background color for the plot, if specified.
 
     Returns:
     --------
     None
     """
+    plt.rcParams.update({'font.size': font_size})
+    
+    def create_scatter_plots(device, feature):
+        num_conditions = len(conditions)
+        fig, axs = plt.subplots(num_conditions, 1, figsize=(width, height_per_condition*num_conditions))
+        
+        # Make sure axs is always a list, even if there's only one condition
+        if num_conditions == 1:
+            axs = [axs]
+        
+        for c, condition in enumerate(conditions):
+            device_data = data[device][feature][condition]
+            criterion_data = data[criterion][feature][condition]
 
-    def create_scatter_plots(feature):
-        fig, axs = plt.subplots(len(conditions), len(devices) - 1, figsize=(width, height))
+            filtered_data_device = []
+            filtered_data_criterion = []
 
-        for d, device in enumerate(devices[:-1]):
-            for c, condition in enumerate(conditions):
-                # Check for matching values between the criterion and device
-                device_data = data[device][feature][condition]
-                criterion_data = data[criterion][feature][condition]
+            for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+                if pp_value_device and pp_value_criterion:
+                    filtered_data_device.append(pp_value_device[0])
+                    filtered_data_criterion.append(pp_value_criterion[0])
 
-                filtered_data_device = []
-                filtered_data_criterion = []
+            slope = regression_data[device][feature][condition]['slope']
+            intercept = regression_data[device][feature][condition]['intercept']
+            r_value = regression_data[device][feature][condition]['r_value']
+            p_value = regression_data[device][feature][condition]['p_value']
 
-                for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
-                    if pp_value_device and pp_value_criterion:
-                        filtered_data_device.append(pp_value_device[0])
-                        filtered_data_criterion.append(pp_value_criterion[0])
-
-                slope = regression_data[device][feature][condition]['slope']
-                intercept = regression_data[device][feature][condition]['intercept']
-                r_value = regression_data[device][feature][condition]['r_value']
-                p_value = regression_data[device][feature][condition]['p_value']
-
-                axs[c, d].scatter(filtered_data_device, filtered_data_criterion, alpha=0.8)
-                axs[c, d].set_xlabel(device)
-                axs[c, d].set_ylabel(criterion)
-
-                # Add the regression line to the plot
-                x = np.array(filtered_data_device)
-                axs[c, d].plot(x, intercept + slope * x, 'r', label='y={:.2f}x+{:.2f}'.format(slope, intercept))
-
-                # Add the correlation coefficient and significance to the plot
-                axs[c, d].annotate(f"r = {r_value:.2f}, p = {p_value:.2f}", (0.05, 0.9), xycoords='axes fraction')
-
-                # Setting title for each row and for columns
-                axs[c, 0].set_ylabel(condition.capitalize(), fontsize=15, rotation=0, ha='right', labelpad=80, c='r')
-
-        for d, device in enumerate(devices[:-1]):
-            axs[0, d].set_title(feature.capitalize() + "  " + device.capitalize() + " - " + criterion.capitalize(), fontsize=15, y=1.1, c='b')
-
+            axs[c].scatter(filtered_data_device, filtered_data_criterion, alpha=0.8, color=marker_color)
+            axs[c].set_xlabel(device if c == num_conditions - 1 else "")
+            axs[c].set_ylabel(criterion if c == 0 else "")
+            axs[c].set_title(condition.capitalize(), loc='left', fontsize=12)
+            
+            # Regression line
+            x = np.array(filtered_data_device)
+            axs[c].plot(x, intercept + slope * x, regression_line_style, color=regression_line_color, 
+                        label='y={:.2f}x+{:.2f}'.format(slope, intercept))
+            
+            # Correlation coefficient and significance
+            n = len(filtered_data_device)  # Number of observations
+            axs[c].annotate(f"r = {r_value:.2f}, p = {p_value:.2f}, n = {n}", (0.05, 0.9), xycoords='axes fraction')
+            
+            # Optional Grid
+            if show_grid:
+                axs[c].grid(True, which='both', linestyle='--', linewidth=0.5)
+            
+            # Background color
+            if background_color:
+                axs[c].set_facecolor(background_color)
+        
+        fig.suptitle(f"Regression between {device.capitalize()} and {criterion.capitalize()} for {feature.capitalize()}", 
+                     fontsize=16 + 2, y=1.02)
         plt.tight_layout()  # to avoid overlaps
         plt.show()
 
     def update_scatter_plots(*args):
+        device = device_dropdown.value
         feature = feature_dropdown.value
 
         with out:
             clear_output(wait=True)
-            create_scatter_plots(feature)
+            create_scatter_plots(device, feature)
 
+    device_dropdown = widgets.Dropdown(
+        options=devices[:-1],  # excluding the criterion device
+        value=devices[0],
+        description='Device:',
+        disabled=False,
+    )
+    
     feature_dropdown = widgets.Dropdown(
         options=features,
         value=features[0],
@@ -962,10 +1057,11 @@ def regression_plot (regression_data, data, criterion, conditions, devices, feat
         disabled=False,
     )
 
+    device_dropdown.observe(update_scatter_plots, names='value')
     feature_dropdown.observe(update_scatter_plots, names='value')
 
     out = widgets.Output()
-    display(feature_dropdown, out)
+    display(widgets.VBox([device_dropdown, feature_dropdown, out]))
     update_scatter_plots()
 
 ###########################################################################
@@ -1062,7 +1158,7 @@ def heatmap_plot (data, criterion, devices, conditions, features):
 ###########################################################################
 ###########################################################################
 
-def icc_analysis (data, criterion, devices, conditions, features):
+def icc_analysis (data, criterion, devices, conditions, features, path, save_as_csv):
 
     """
     This function calculates the Intraclass Correlation Coefficient (ICC) for each device compared to the criterion device, for each condition and feature.
@@ -1115,33 +1211,67 @@ def icc_analysis (data, criterion, devices, conditions, features):
                     icc_data[device][feature][condition] = None
 
     print("Done Successfully!")
+
+    if save_as_csv:
+        # Convert nested dictionary to a list of rows
+        rows = []
+        for device in icc_data:
+            for feature in icc_data[device]:
+                for condition in icc_data[device][feature]:
+                    row_data = icc_data[device][feature][condition]
+                    if row_data is not None:
+                        for index, icc_row in row_data.iterrows():
+                            rows.append([
+                                device, feature, condition, 
+                                icc_row['Type'], icc_row['ICC'], 
+                                icc_row['CI95%'], icc_row['pval']
+                            ])
+                    else:
+                        rows.append([device, feature, condition, None, None, None, None])
+
+        # Convert list of rows to DataFrame
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'ICC Type', 'ICC Value', 'ICC CI95%', 'p-value'])
+        
+        # Save DataFrame to CSV
+        df.to_csv(path+'icc_data.csv', index=False)
+        print("ICC data saved successfully!")
+
     return icc_data
 
 ###########################################################################
 ###########################################################################
 ###########################################################################
 
-def icc_plot (icc_data, conditions, devices, features):
+def icc_plot(icc_data, conditions, devices, features, font_size=12, cmap="coolwarm"):
 
     """
-    This function creates an interactive heatmap plot for ICC values of each device compared to the criterion device, for each condition and feature.
+    This function creates an interactive heatmap plot for ICC values of each device compared to the criterion device, 
+    for each condition and feature. The heatmap provides both the ICC values and their corresponding 95% confidence intervals.
 
     Parameters:
     -----------
     icc_data : dict
-        A nested dictionary containing the ICC results for each device, feature, and condition.
+        A nested dictionary containing the ICC results (ICC value and 95% confidence interval) for each device, feature, and condition.
     conditions : list
         A list of strings representing the different experimental conditions of the data.
     devices : list
-        A list of strings representing the different devices used to collect the data.
+        A list of strings representing the different devices used to collect the data. The last device is assumed to be the criterion device.
     features : list
         A list of strings representing the different features of the data.
+    font_size : int, optional, default: 12
+        The font size for labels, titles, and annotations.
+    cmap : str, optional, default: "coolwarm"
+        The color map to be used for the heatmap. This should be a valid matplotlib or seaborn colormap string.
 
     Returns:
     --------
     None
-    """
 
+    Note:
+    The function displays an interactive dropdown widget for feature selection and renders the heatmap based on the selected feature.
+    """
+    plt.rcParams.update({'font.size': font_size})
+    
     def plot_icc_heatmap(feature):
         icc_matrix = []
         ci95_matrix = []
@@ -1167,15 +1297,15 @@ def icc_plot (icc_data, conditions, devices, features):
         icc_df = pd.DataFrame(icc_matrix, columns=devices[:-1], index=conditions)
 
         plt.figure(figsize=(10, 6))
-        ax = sns.heatmap(icc_df, annot=True, fmt=".2f", cmap="coolwarm", cbar_kws={'label': f'ICC1 - {feature.upper()}'})
-
+        ax = sns.heatmap(icc_df, annot=True, fmt=".2f", cmap=cmap, cbar_kws={'label': f'ICC1 - {feature.upper()}'})
+        
         for i, condition in enumerate(conditions):
             for j, device in enumerate(devices[:-1]):
                 ci95_lower, ci95_upper = ci95_matrix[i][j]
                 if ci95_lower is not None and ci95_upper is not None:
                     annotation = f"[{ci95_lower:.2f}, {ci95_upper:.2f}]"
-                    t = ax.text(j + 0.5, i + 0.3, annotation, ha='center', va='top', color='black', fontsize=9, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.2'))
-                    t.set_bbox(dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.2', alpha=0.5))
+                    ax.text(j + 0.5, i + 0.7, annotation, ha='center', va='center', color='black', 
+                            fontsize=font_size - 2, bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.2', alpha=0.5))
 
         plt.xlabel("Devices")
         plt.ylabel("Conditions")
@@ -1185,7 +1315,6 @@ def icc_plot (icc_data, conditions, devices, features):
 
     def update_icc_heatmap(*args):
         feature = feature_dropdown.value
-
         with out:
             clear_output(wait=True)
             plot_icc_heatmap(feature)
@@ -1207,7 +1336,7 @@ def icc_plot (icc_data, conditions, devices, features):
 ###########################################################################
 ###########################################################################
 
-def blandaltman_analysis (data, criterion, devices, conditions, features):
+def blandaltman_analysis (data, criterion, devices, conditions, features, path, save_as_csv=False):
 
     """
     This function calculates the Bland-Altman analysis for each device compared to the criterion device, for each condition and feature.
@@ -1260,77 +1389,175 @@ def blandaltman_analysis (data, criterion, devices, conditions, features):
                     blandaltman_data[device][feature][condition] = None
 
     print("Done Successfully!")
+
+    if save_as_csv:
+        # Convert nested dictionary to a list of rows
+        rows = []
+        for device in blandaltman_data:
+            for feature in blandaltman_data[device]:
+                for condition in blandaltman_data[device][feature]:
+                    row_data = blandaltman_data[device][feature][condition]
+                    if row_data:
+                        rows.append([
+                            device, feature, condition,
+                            row_data['bias'], row_data['sd'],
+                            row_data['limits_of_agreement'][0], row_data['limits_of_agreement'][1]
+                        ])
+                    else:
+                        rows.append([device, feature, condition, None, None, None, None])
+
+        # Convert list of rows to DataFrame
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'Bias', 'SD', 'Lower Limit of Agreement', 'Upper Limit of Agreement'])
+        
+        # Save DataFrame to CSV
+        df.to_csv(path+'blandaltman_data.csv', index=False)
+        print("Blandaltman Data saved successfully!")
+        
     return blandaltman_data
 
 ###########################################################################
 ###########################################################################
 ###########################################################################
 
-def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, features, width=20, height=20):
-
+def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, features, 
+                         width=10, height_per_plot=5, agreement_bound=1.96, confidenceInterval=95, 
+                         percentage=False, mean_diff_color='#FF6347', boundary_color='#20B2AA', pointColour='#8B008B', shade=True):
+    # To create this plot, some ideas come from this python package: https://github.com/jaketmp/pyCompare/blob/main/pyCompare/_plotBlandAltman.py
     """
-    This function creates Bland-Altman plots (mean-difference plots) for each device compared to the criterion device, for each condition and feature.
-
+    Generates Bland-Altman plots for data comparison between devices and a criterion.
+    
     Parameters:
     -----------
-    blandaltman_data : dict
-        A nested dictionary containing the Bland-Altman results for each device, feature, and condition.
-    data : dict
-        A nested dictionary containing the data for each device, feature, and condition.
-    criterion : str
-        A string representing the name of the criterion device.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    features : list
-        A list of strings representing the different features of the data.
-    width : int, optional, default=20
-        The width of the entire plot figure.
-    height : int, optional, default=20
-        The height of the entire plot figure.
-
+    blandaltman_data: dict
+        The Bland-Altman data.
+    
+    data: dict
+        The main data containing measurement values from various devices.
+        
+    criterion: str
+        The name of the criterion device against which comparisons are made.
+        
+    conditions: list
+        List of conditions under which measurements were taken.
+        
+    devices: list
+        List of measurement devices including the criterion device.
+        
+    features: list
+        List of features or metrics being measured.
+        
+    width: int, optional, default=10
+        Width of the entire plot.
+        
+    height_per_plot: int, optional, default=5
+        Height of each individual subplot.
+        
+    agreement_bound: float, optional, default=1.96
+        Multiplier for the standard deviation to determine limits of agreement.
+        
+    confidenceInterval: float, optional, default=95
+        Confidence interval percentage for shading (if applied).
+        
+    percentage: bool, optional, default=False
+        If True, plots differences as percentages. Otherwise, plots raw differences.
+        
+    mean_diff_color: str, optional, default='#FF6347'
+        Color used for the mean difference line.
+        
+    boundary_color: str, optional, default='#20B2AA'
+        Color used for the upper and lower limits of agreement lines.
+        
+    pointColour: str, optional, default='#8B008B'
+        Color used for the individual data points.
+        
+    shade: bool, optional, default=True
+        If True, shades the confidence interval around the mean and limits of agreement.
+        
     Returns:
     --------
     None
-
-    This function displays Bland-Altman plots using interactive widgets. The user can select the feature of interest to visualize the Bland-Altman plots.
+        The function displays the Bland-Altman plots and doesn't return any value.
+        
+    Note:
+    -----
+    This function generates Bland-Altman plots for each combination of device (excluding the criterion) 
+    and feature, under each condition. The plots include the mean difference (bias) and the upper and 
+    lower limits of agreement, and optionally the shaded confidence intervals.
     """
+    
+    sns.set(style="whitegrid", rc={"grid.linewidth": 0.5, 'grid.color': '.7', 'ytick.major.size': 5, 'axes.edgecolor': '.3'})
+    plt.rcParams['figure.facecolor'] = 'white'
 
-    def create_mean_difference_plots(feature):
-        fig, axs = plt.subplots(len(conditions), len(devices) - 1, figsize=(width, height))
+    def create_blandaltman_plots(feature, device):
+        fig, axs = plt.subplots(len(conditions), 1, figsize=(width, height_per_plot * len(conditions)))
 
-        for d, device in enumerate(devices[:-1]):
-            for c, condition in enumerate(conditions):
-                device_data = data[device][feature][condition]
-                criterion_data = data[criterion][feature][condition]
+        for c, condition in enumerate(conditions):
+            device_data = data[device][feature][condition]
+            criterion_data = data[criterion][feature][condition]
 
-                filtered_data_device = []
-                filtered_data_criterion = []
+            filtered_data_device = []
+            filtered_data_criterion = []
 
-                for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
-                    if pp_value_device and pp_value_criterion:
-                        filtered_data_device.append(pp_value_device[0])
-                        filtered_data_criterion.append(pp_value_criterion[0])
+            for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+                if pp_value_device and pp_value_criterion:
+                    filtered_data_device.append(pp_value_device[0])
+                    filtered_data_criterion.append(pp_value_criterion[0])
 
-                sm.graphics.mean_diff_plot(np.array(filtered_data_device), np.array(filtered_data_criterion), ax=axs[c, d])
+            # Convert lists to numpy arrays and sort them
+            filtered_data_device = np.array(filtered_data_device)
+            filtered_data_criterion = np.array(filtered_data_criterion)
 
-                # Setting title for each row
-                axs[c, 0].set_ylabel(condition.capitalize(), fontsize=15, rotation=0, ha='right', labelpad=80, c='r')
+            mean_diff_pairs = sorted(zip(np.mean([filtered_data_device, filtered_data_criterion], axis=0), 
+                                        ((filtered_data_device - filtered_data_criterion) / np.mean([filtered_data_device, filtered_data_criterion], axis=0)) * 100 if percentage else filtered_data_device - filtered_data_criterion))
+            mean_vals, diff_vals = zip(*mean_diff_pairs)
 
-        for d, device in enumerate(devices[:-1]):
-            axs[0, d].set_title(feature.capitalize() + " - " + device.capitalize() + " - " + criterion.capitalize(), fontsize=15, y=1.1, c='b')
-            axs[0, d].set_title(feature.capitalize() + " - " + device.capitalize() + " - " + criterion.capitalize(), fontsize=15, y=1.1, c='b')
+            md = np.mean(diff_vals)
+            sd = np.std(diff_vals, axis=0)
 
-        plt.tight_layout()  # to avoid overlaps
+            loa_upper = md + agreement_bound * sd
+            loa_lower = md - agreement_bound * sd
+
+            # Plot the data
+            axs[c].scatter(mean_vals, diff_vals, alpha=0.5, c=pointColour)
+            axs[c].axhline(md, color=mean_diff_color, linestyle='--')
+            axs[c].axhline(loa_upper, color=boundary_color, linestyle='--')
+            axs[c].axhline(loa_lower, color=boundary_color, linestyle='--')
+
+            if shade:
+                # Add shading for confidence intervals
+                z_value = stats.norm.ppf((1 + (confidenceInterval / 100)) / 2.)
+                se_loa = sd * np.sqrt((1/len(diff_vals)) + (4/2/len(diff_vals)))
+                loa_range = z_value * se_loa
+                
+                axs[c].fill_between(mean_vals, md + loa_range, md - loa_range, color=mean_diff_color, alpha=0.2)
+                axs[c].fill_between(mean_vals, loa_upper + loa_range, loa_upper - loa_range, color=boundary_color, alpha=0.2)
+                axs[c].fill_between(mean_vals, loa_lower + loa_range, loa_lower - loa_range, color=boundary_color, alpha=0.2)
+
+            # Right-side annotations
+            trans = transforms.blended_transform_factory(axs[c].transAxes, axs[c].transData)
+            offset = (loa_upper - loa_lower) * 0.02  # 2% of range for offset
+
+            axs[c].text(1.02, md, f'Mean\n{md:.2f}', ha="left", va="center", transform=trans, color=mean_diff_color)
+            axs[c].text(1.02, loa_upper, f'+{agreement_bound:.2f} SD\n{loa_upper:.2f}', ha="left", va="center", transform=trans, color=boundary_color)
+            axs[c].text(1.02, loa_lower, f'-{agreement_bound:.2f} SD\n{loa_lower:.2f}', ha="left", va="center", transform=trans, color=boundary_color)
+
+            axs[c].set_title(f'{condition.capitalize()}', fontsize=14, color='black', loc='left')
+
+            if c == len(conditions) - 1:
+                axs[c].set_xlabel(f'Mean of {device} and {criterion}', fontsize=12)
+            axs[c].set_ylabel('Difference', fontsize=12)
+
+        fig.suptitle(f'Bland-Altman Plot for {feature.capitalize()} - {device.capitalize()} vs. {criterion.capitalize()}', fontsize=16)
+        plt.tight_layout(rect=[0, 0.03, 0.95, 0.95])
         plt.show()
 
-    def update_mean_difference_plots(*args):
+    def update_blandaltman_plots(*args):
         feature = feature_dropdown.value
+        device = device_dropdown.value
 
         with out:
             clear_output(wait=True)
-            create_mean_difference_plots(feature)
+            create_blandaltman_plots(feature, device)
 
     feature_dropdown = widgets.Dropdown(
         options=features,
@@ -1339,11 +1566,19 @@ def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, fe
         disabled=False,
     )
 
-    feature_dropdown.observe(update_mean_difference_plots, names='value')
+    device_dropdown = widgets.Dropdown(
+        options=devices[:-1],
+        value=devices[0],
+        description='Device:',
+        disabled=False,
+    )
+
+    feature_dropdown.observe(update_blandaltman_plots, names='value')
+    device_dropdown.observe(update_blandaltman_plots, names='value')
 
     out = widgets.Output()
-    display(feature_dropdown, out)
-    update_mean_difference_plots()
+    display(widgets.VBox([feature_dropdown, device_dropdown, out]))
+    update_blandaltman_plots()
 
 ###########################################################################
 ###########################################################################

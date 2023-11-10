@@ -29,6 +29,32 @@ from avro.io import DatumReader
 ###########################################################################
 
 def labfront_conversion (path, pp, file_name, device_name, date):
+
+    """
+    Converts Labfront data into a standardized CSV format, filtering by a specific date.
+
+    This function processes CSV data from Labfront. It first reads the data, then focuses on 
+    the 'isoDate' and 'bbi' columns. The data is then filtered based on the provided date, and 
+    relevant columns are renamed for standardization. The processed data is then saved into a new CSV file.
+
+    Parameters:
+    -----------
+    path : str
+        The directory path pointing to the location of the Labfront data.
+    pp : str
+        The unique ID of the participant for which the data is being processed.
+    file_name : str
+        The name of the Labfront file (with its extension) to be processed.
+    device_name : str
+        The name of the device used to collect the data. This will be used in the resulting CSV's filename.
+    date : str
+        The specific date for which data should be extracted, provided in a format that can be parsed by pandas' to_datetime function (e.g., 'YYYY-MM-DD').
+
+    Returns:
+    --------
+    None. The function saves the output directly to a CSV file in the specified path.
+    """
+
     labfront = pd.read_csv (path+file_name, skiprows=5)
     # convert isoDate to datetime column
     labfront['isoDate'] = pd.to_datetime(labfront['isoDate'])
@@ -45,6 +71,32 @@ def labfront_conversion (path, pp, file_name, device_name, date):
 ###########################################################################
 
 def empatica_conversion (path, pp):
+    
+    """
+    Converts Empatica data from Avro format into a CSV file, focusing on the 'systolicPeaks' field.
+
+    This function processes data files associated with a participant's Empatica device data stored 
+    in Avro format. It specifically reads the 'systolicPeaks' field from these Avro files. 
+    The extracted peak times (in nanoseconds) are converted to milliseconds, and the interbeat 
+    intervals (IBIs) are then calculated. The resulting data is saved to a CSV file.
+
+    Parameters:
+    -----------
+    path : str
+        The directory path pointing to the location of the participant's Empatica data.
+    pp : str
+        The unique ID of the participant whose Empatica data is to be converted.
+
+    Note:
+    -----
+    The expected directory structure is: 
+    <path>/<participant_id>_empatica/raw_data/v6
+    with Avro files containing the 'systolicPeaks' field.
+
+    Returns:
+    --------
+    None. The function saves the output directly to a CSV file in the specified path.
+    """
 
     avrofiles_path = path + "/" +  pp + "_empatica" + "/raw_data"  + "/v6"
     file_name = "empatica"
@@ -232,21 +284,28 @@ def define_events(path, pp, conditions, already_saved= True, save_as_csv= False)
 def import_data (path, pp, devices):
 
     """
-    This function imports the data from different devices for a specific participant.
+    Imports participant-specific data from different devices and consolidates them into a dictionary.
+
+    This function processes data files associated with different devices. For the "vu" device, it 
+    specifically reads from a text file exported from VU-DAMS. Other devices' data are expected in CSV format,
+    often recorded using HRV Logger. It's noteworthy that, for HRV Logger, if there's an unnecessary third 
+    column in the data, it will be dropped.
 
     Parameters:
     -----------
     path : str
-        The path to the directory where the data files are stored.
+        The directory path where the data files corresponding to the participant are located.
     pp : str
-        The ID of the participant whose data is being imported.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
+        The unique ID of the participant whose data is to be imported.
+    devices : list of str
+        Names of devices from which the data has been collected. Data from each device is expected to be 
+        in a file named in the format: <participant_id>_<device_name>.<appropriate_extension>.
 
     Returns:
     --------
     data : dict
-        A dictionary that contains the data from all devices for the participant.
+        A dictionary wherein each key is a device name and the associated value is a DataFrame containing 
+        the data from that device for the specified participant.
     """
 
     data = {device: {} for device in devices} #creating an empty dictionary to store data from all devices
@@ -374,7 +433,7 @@ def calculate_ibi (data_chopped, devices, conditions):
 ###########################################################################
 ###########################################################################
 
-def visual_inspection (data_chopped, devices, conditions,criterion):
+def visual_inspection (data_chopped, devices, conditions, criterion):
 
     """
     This function allows for visual inspection and manual modification of the RR interval data.
@@ -394,9 +453,9 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
     --------
     None
     """
+
     # Define the function that creates the plot
     def plot_rr_intervals(device, condition, lag, device_start, device_end, criterion_start, criterion_end):
-
         # Trimming
         trim_device = slice(device_start, device_end)
         trim_criterion = slice(criterion_start, criterion_end)
@@ -408,6 +467,10 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         # Get the RR intervals and timestamps for the criterion (vu)
         criterion_rr = data_chopped[criterion][condition]['rr'][trim_criterion]
         criterion_timestamp = data_chopped[criterion][condition]['timestamp'][trim_criterion]
+
+        # Adjust lag based on precision (seconds or milliseconds)
+        if precision_dropdown.value == 'Milliseconds':
+            lag = lag / 1000  # Convert milliseconds to seconds
 
         # Shift the timestamps of the PPG device by the lag amount
         ppg_timestamp = ppg_timestamp + pd.Timedelta(seconds=lag)
@@ -442,16 +505,23 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
 
     # Define the function that saves the lag
     def save_lag(lag):
-        # Apply the lag to the original data for the selected device and condition
-        ppg_timestamp = data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp']
-        data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp'] = ppg_timestamp + pd.Timedelta(seconds=lag)
+        # Adjust lag based on precision (seconds or milliseconds)
+        if precision_dropdown.value == 'Milliseconds':
+            lag = lag / 1000  # Convert milliseconds to seconds
+
+        if correction_mode_dropdown.value == "Full Lag Correction":
+            for condition in conditions:
+                ppg_timestamp = data_chopped[device_dropdown.value][condition]['timestamp']
+                data_chopped[device_dropdown.value][condition]['timestamp'] = ppg_timestamp + pd.Timedelta(seconds=lag)
+        else:
+            ppg_timestamp = data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp']
+            data_chopped[device_dropdown.value][condition_dropdown.value]['timestamp'] = ppg_timestamp + pd.Timedelta(seconds=lag)
 
         # Reset the lag to 0
         lag_slider.value = 0
 
         # Display a message to inform the user that the data has been modified
         print("Data has been modified with a lag of {} seconds.".format(lag))
-
 
     def save_crop(device_start, device_end, criterion_start, criterion_end):
         data_chopped[device_dropdown.value][condition_dropdown.value]['rr'] = data_chopped[device_dropdown.value][condition_dropdown.value]['rr'][device_start:device_end]
@@ -467,7 +537,6 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         update_device_condition()
         print("Cropped data has been saved.")
 
-    # Define the function that updates the plot for device and condition changes
     def update_device_condition(*args):
         lag_slider.value = 0
 
@@ -485,7 +554,6 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
             clear_output(True)
             plot_rr_intervals(device_dropdown.value, condition_dropdown.value, lag_slider.value, device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value)
 
-    # Define the function that updates the plot
     def update_plot(change):
         with out:
             clear_output(True)
@@ -498,6 +566,39 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
     criterion_start_slider = widgets.IntSlider(min=0, max=len(data_chopped[criterion][conditions[0]]['rr'])-1, value=0, description='Criterion Start:', continuous_update=False)
     criterion_end_slider = widgets.IntSlider(min=1, max=len(data_chopped[criterion][conditions[0]]['rr']), value=len(data_chopped[criterion][conditions[0]]['rr']), description='Criterion End:', continuous_update=False)
 
+    # Define the widget for lag correction mode
+    correction_mode_dropdown = widgets.Dropdown(
+        options=['Individual Lag Correction', 'Full Lag Correction'],
+        value='Individual Lag Correction',
+        description='Correction Mode:',
+        disabled=False,
+    )
+
+    # Define the precision dropdown widget
+    precision_dropdown = widgets.Dropdown(
+        options=['Seconds', 'Milliseconds'],
+        value='Seconds',
+        description='Precision:',
+        disabled=False,
+    )
+
+    # Function to update lag_slider parameters based on precision
+    def update_lag_slider_precision(*args):
+        if precision_dropdown.value == 'Seconds':
+            lag_slider.min = -20
+            lag_slider.max = 20
+            lag_slider.value = 0
+            lag_slider.description = 'Lag (s):'
+            lag_slider.readout_format = 'd'
+        else:
+            lag_slider.min = -20000
+            lag_slider.max = 20000
+            lag_slider.value = 0
+            lag_slider.description = 'Lag (ms):'
+            lag_slider.readout_format = 'd'
+
+    # Observe changes in precision dropdown and update lag slider accordingly
+    precision_dropdown.observe(update_lag_slider_precision, names='value')
 
     # Create the device dropdown widget
     device_dropdown = widgets.Dropdown(
@@ -507,7 +608,6 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         disabled=False,
     )
 
-    # Create the condition dropdown widget
     condition_dropdown = widgets.Dropdown(
         options=conditions,
         value=conditions[0],
@@ -515,7 +615,6 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         disabled=False,
     )
 
-    # Create the lag slider widget
     lag_slider = widgets.IntSlider(
         value=0,
         min=-20,
@@ -528,11 +627,9 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         readout=True,
         readout_format='d'
     )
-
-    # Set the width of the lag slider widget
     lag_slider.layout = widgets.Layout(width='80%')
 
-    # Create the plot button widget
+    # Define the buttons
     plot_button = widgets.Button(
         description='Plot RR Intervals',
         disabled=False,
@@ -540,8 +637,6 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         tooltip='Click me',
         icon='check'
     )
-
-    # Create the save button widget
     save_button = widgets.Button(
         description='Save Lag',
         disabled=False,
@@ -549,8 +644,6 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
         tooltip='Click me',
         icon='save'
     )
-
-    # Create the save crop button widget
     save_crop_button = widgets.Button(
         description='Save Crop',
         disabled=False,
@@ -562,53 +655,43 @@ def visual_inspection (data_chopped, devices, conditions,criterion):
     # Create the output widget
     out = widgets.Output()
 
-    # Plot RR intervals for initial values of device and condition dropdowns\
-    update_device_condition()
-
-    # Register the update_plot function to be called whenever the lag_slider value changes
-    lag_slider.observe(update_plot, names='value')
-
-    # Register the new slider values to the update_plot function
-    device_start_slider.observe(update_plot, names='value')
-    device_end_slider.observe(update_plot, names='value')
-    criterion_start_slider.observe(update_plot, names='value')
-    criterion_end_slider.observe(update_plot, names='value')
-
-    # Observe device and condition changes
-    device_dropdown.observe(update_device_condition, names='value')
-    condition_dropdown.observe(update_device_condition, names='value')
-
-    # Create a box containing the new sliders
+    # Define the trimming box
     trimming_box = widgets.VBox(children=[
         widgets.HBox(children=[device_start_slider, device_end_slider]),
         widgets.HBox(children=[criterion_start_slider, criterion_end_slider]),
     ])
 
+    # Register event listeners
+    lag_slider.observe(update_plot, names='value')
+    device_start_slider.observe(update_plot, names='value')
+    device_end_slider.observe(update_plot, names='value')
+    criterion_start_slider.observe(update_plot, names='value')
+    criterion_end_slider.observe(update_plot, names='value')
+    device_dropdown.observe(update_device_condition, names='value')
+    condition_dropdown.observe(update_device_condition, names='value')
+    save_button.on_click(lambda b: save_lag(lag_slider.value))
+    save_crop_button.on_click(lambda b: save_crop(device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value))
 
-    # Create a box containing the dropdowns and the slider
+    # Create the GUI layout
+
     widgets_box = widgets.VBox(children=[
         widgets.HBox(children=[device_dropdown, condition_dropdown]),
+        widgets.HBox(children=[correction_mode_dropdown, precision_dropdown]),
         widgets.HBox(children=[lag_slider, widgets.VBox(children=[save_button, save_crop_button])]),
         trimming_box
     ])
 
-    # Create a box for the output
     output_box = widgets.VBox(children=[out])
 
-    # Define the layout for the entire GUI
     gui_box_layout = widgets.Layout(display='flex',
-                                     flex_flow='column',
-                                     align_items='stretch',
-                                     width='80%')
+                                    flex_flow='column',
+                                    align_items='stretch',
+                                    width='80%')
     gui_box = widgets.Box(children=[widgets_box, output_box],
-                          layout=gui_box_layout)
+                        layout=gui_box_layout)
 
-    # Add the save function to the button click event
-    save_button.on_click(lambda b: save_lag(lag_slider.value))
-
-    # Add the save crop function to the button click event
-    save_crop_button.on_click(lambda b: save_crop(device_start_slider.value, device_end_slider.value, criterion_start_slider.value, criterion_end_slider.value))
-
+    # Call the function to render the initial plot inside the output widget
+    update_device_condition()
 
     # Display the GUI
     display(gui_box)
