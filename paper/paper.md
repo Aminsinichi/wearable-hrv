@@ -11,33 +11,23 @@ authors:
   - name: Mohammadamin Sinichi
     orcid: 0009-0008-2491-1542
     corresponding: true
-    affiliation: 1
+    affiliation: "1, 3"
   - name: Martin Gevonden
     ordic: 0000-0001-7867-1443
-    affiliation: 2
+    affiliation: "2, 3"
   - name: Lydia Krabbendam
     orcid: 0000-0003-4074-5149
-    affiliation: 1
+    affiliation: "1, 3"
 affiliations:
- - name: Department of Clinical, Neuro- & Developmental Psychology, Faculty of Behavioural and Movement Sciences, Vrije Universiteit Amsterdam, Netherlands
+ - name: Department of Clinical, Neuro- & Developmental Psychology, Faculty of Behavioural and Movement Sciences, Vrije Universiteit Amsterdam, The Netherlands
    index: 1
- - name: Department of Biological Psychology, Faculty of Behavioural and Movement Sciences, Vrije Universiteit Amsterdam, Netherlands
+ - name: Department of Biological Psychology, Faculty of Behavioural and Movement Sciences, Vrije Universiteit Amsterdam, The Netherlands
    index: 2
+ - name: Institute Brain and Behaviour (iBBA), Amsterdam, The Netherlands
+   index: 3
 date: 10 September 2023
 bibliography: paper.bib
 ---
-
-<!-- Your paper should include:
-
-We also require that authors explain the research applications of the software. The paper should be between 250-1000 words. Authors submitting papers significantly longer than 1000 words may be asked to reduce the length of their paper.
-
-A list of the authors of the software and their affiliations, using the correct format (see the example below).
-A summary describing the high-level functionality and purpose of the software for a diverse, non-specialist audience.
-A Statement of need section that clearly illustrates the research purpose of the software and places it in the context of related work.
-A list of key references, including to other software addressing related needs. Note that the references should include full names of venues, e.g., journals and conferences, not abbreviations only understood in the context of a specific discipline.
-Mention (if applicable) a representative set of past or ongoing research projects using the software and recent scholarly publications enabled by it.
-Acknowledgement of any financial support. -->
-
 # Summary
 
 Wearable devices that monitor physiology have become ubiquitous, and include smart watches, smart jewelry, and smart textiles. The market for these devices is rapidly expanding with new brands and products. These devices measure a variety of signals, which are translated into a large amount of different features, of which heart rate (HR) and heart rate variability (HRV) are among the most common. These features are particularly interesting , not only for consumers but also to researchers, because they are predictive of mental and physical health outcomes, and easily obtained. However, for manufacturers there may be a trade-off between user acceptability on one hand and accuracy on the other, where profit margins typically turn out to be the decisive factor. Therefore the following question continually comes up: is the cardiac data recorded by this new watch/ring/shirt accurate enough to use in research?
@@ -54,7 +44,7 @@ The oversight of these wearables' validity may stem from the absence of an integ
 
 In this section, we provide an overview of the main functions and basic usage of the `wearablehrv` pipeline. For detailed documentation of all the functions and examples on data recording and initiating validation, please refer to [README.md](https://github.com/Aminsinichi/wearable-hrv/blob/develop/README.md) and [documentation.ipynb](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb).
 
-The pipeline is divided into individual and group pipelines to cater to single-individual data and combined data from a study, respectively.
+The pipeline is divided into two parts: the individual pipeline, that focuses on the data from a single individual, and the group pipeline, which combines the data from all the observations in a single study.
 
 ![A summary of the the main functionalities of wearablehrv Python package.](main_plot.png)
 
@@ -74,10 +64,10 @@ For visualization across the aggregated dataset, the group module offers `violin
 
 ![An example of the radar plot at the group level, illustrating a comparison between a criterion device and a specified device for `pnni_50`, `rmssd`, `sdnss` (all distinct extracted features for HRV), and mean heart rate (`mean_hr`). Utilizing the `Device` and `Condition` widgets facilitates easy transitioning between a multitude of devices and conditions.](radar_plot.png)
 
-The culmination of the group pipeline involves the main statistical analyses — regression analysis, ICC, and Bland-Altman analysis — enabled by the `regression_analysis`, `icc_analysis`, and `blandaltman_analysis` functions, respectively. These are complemented by their corresponding plotting functions, allowing for a detailed and visual validation of the wearable devices against the criterion device.
+The culmination of the group pipeline involves the main statistical analyses — regression analysis, ICC, and Bland-Altman analysis — enabled by the `regression_analysis`, `icc_analysis`, and `blandaltman_analysis` functions, respectively. These are complemented by their corresponding plotting functions, which can be used to make decisions about device validity, or included in a publication.
 
 # Acknowledgements
 
-We acknowledge contribution from Dr. Denise J. van der Mee and advices from Dr. Marco Altini.
+This study is an output of the ALIVE project (Improving Adolescent mentaL health by reducing the Impact of PoVErty). This work was supported by the Wellcome Trust [221940/Z/20/Z]. We acknowledge contribution from Dr. Denise J. van der Mee and advice from Dr. Marco Altini.
 
 # References
