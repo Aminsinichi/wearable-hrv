@@ -328,6 +328,23 @@ def import_data (path, pp, devices):
             except:
                 data[device].columns = data[device].columns.str.strip() # Strip leading/trailing whitespace from column labels
 
+     #3. changing dataset timestamps:
+    for device in devices:
+
+        if device == "vu":
+            data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.split('/')[-1])
+            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'], format='%H:%M:%S.%f')
+
+        else:
+
+            for i in range(np.size(data[device]['timestamp'])):
+                timestamp_float = float(data[device].loc[i, 'timestamp'])
+                data[device].loc[i, 'timestamp'] = datetime.datetime.fromtimestamp(timestamp_float / 1000)
+            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'])
+
+        # Format timestamp column as string with format hh:mm:ss.mmm
+        data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])   
+    
     print ("Datasets imported succesfully")
     return data
 
@@ -356,23 +373,7 @@ def chop_data (data, conditions, events, devices):
     data_chopped : dict
         A dictionary containing the chopped data for all devices and conditions.
     """
-    #changing dataset timestamps:
-    for device in devices:
-
-        if device == "vu":
-            data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.split('/')[-1])
-            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'], format='%H:%M:%S.%f')
-
-        else:
-
-            for i in range(np.size(data[device]['timestamp'])):
-                timestamp_float = float(data[device].loc[i, 'timestamp'])
-                data[device].loc[i, 'timestamp'] = datetime.datetime.fromtimestamp(timestamp_float / 1000)
-            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'])
-
-        # Format timestamp column as string with format hh:mm:ss.mmm
-        data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
-
+    
     #it contains the begening and end of each condition
     eventchopped = {}  # it contains the beginning and end of each condition
 
