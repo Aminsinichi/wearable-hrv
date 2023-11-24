@@ -7,6 +7,7 @@
 
 import datetime
 import os
+import copy
 import json
 import pickle
 import pandas as pd
@@ -328,8 +329,133 @@ def import_data (path, pp, devices):
             except:
                 data[device].columns = data[device].columns.str.strip() # Strip leading/trailing whitespace from column labels
 
+     #3. changing dataset timestamps:
+    for device in devices:
+
+        if device == "vu":
+            data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.split('/')[-1])
+            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'], format='%H:%M:%S.%f')
+
+        else:
+
+            for i in range(np.size(data[device]['timestamp'])):
+                timestamp_float = float(data[device].loc[i, 'timestamp'])
+                data[device].loc[i, 'timestamp'] = datetime.datetime.fromtimestamp(timestamp_float / 1000)
+            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'])
+
+        # Format timestamp column as string with format hh:mm:ss.mmm
+        data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])   
+    
     print ("Datasets imported succesfully")
     return data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def lag_correction(data, devices, criterion):
+    """
+    Adjusts and visualizes the lag in timestamped data for different devices.
+
+    This function creates an interactive GUI using IPython widgets. It allows users to select a device, define a time range, and adjust the lag (in milliseconds) for the data. The adjusted data is visualized in a plot.
+
+    Parameters:
+    data (dict): A dictionary containing timestamped data for multiple devices.
+    devices (list): A list of strings representing the available devices.
+    criterion (str): The criterion used for selecting the relevant data from 'data'.
+
+    Returns:
+    --------
+    None
+    """
+    # Create the device dropdown widget
+    device_dropdown = widgets.Dropdown(
+        options=devices,
+        description='Device:',
+        disabled=False,
+    )
+
+    # Time input widgets for selecting start and end time
+    start_time_picker = widgets.Text(value=data[criterion]['timestamp'].iloc[200], description='Start Time:', continuous_update=False)
+    end_time_picker = widgets.Text(value=data[criterion]['timestamp'].iloc[300] , description='End Time:', continuous_update=False)
+
+    # Lag adjustment slider
+    lag_slider = widgets.IntSlider(
+        value=0,
+        min=-20000,
+        max=20000,
+        step=1,
+        description='Lag (ms):',
+        disabled=False,
+        continuous_update=True,
+        orientation='horizontal',
+        readout=True,
+        readout_format='d'
+    )
+    lag_slider.layout = widgets.Layout(width='80%')
+
+    # Output widget for the plot
+    out = widgets.Output()
+
+    # Update plot based on the current settings
+    def update_plot(*args):
+        with out:
+            clear_output(True)
+            selected_device = select_data(device_dropdown.value)
+            selected_criterion = select_data(criterion)
+            plot_data(selected_device, selected_criterion, lag_slider.value)
+
+    # Select data based on the time range
+    def select_data(device):
+        selected_time_start = pd.to_datetime(start_time_picker.value, format='%H:%M:%S.%f')
+        selected_time_end = pd.to_datetime(end_time_picker.value, format='%H:%M:%S.%f')
+        data_converted = copy.deepcopy(data)
+        data_converted[device]['timestamp'] = pd.to_datetime(data_converted[device]['timestamp'], format='%H:%M:%S.%f')
+        return data_converted[device][(data_converted[device]['timestamp'] > selected_time_start) & (data_converted[device]['timestamp'] < selected_time_end)]
+
+    # Plot the data
+    def plot_data(selected_device, selected_criterion, lag):
+        lag = lag / 1000  # Convert milliseconds to seconds
+        plt.figure(figsize=(17, 5))
+        plt.plot(selected_device["timestamp"] + pd.Timedelta(seconds=lag), selected_device["rr"], "-o", label=device_dropdown.value)
+        plt.plot(selected_criterion["timestamp"], selected_criterion["rr"], "-o", label=criterion)
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+        plt.gca().xaxis.set_major_locator(mdates.AutoDateLocator(minticks=3, maxticks=7))
+        plt.xlabel("Timestamp", fontsize=12)
+        plt.ylabel("RR Intervals", fontsize=12)
+        plt.grid()
+        plt.xticks(rotation=90)
+        plt.legend()
+        plt.show()
+
+    # Save lag
+    def save_lag(b):
+        lag = lag_slider.value / 1000
+        data[device_dropdown.value]["timestamp"] = data[device_dropdown.value]["timestamp"] + pd.Timedelta(seconds=lag)
+        baseline = pd.Timestamp('1900-01-01')
+        data[device_dropdown.value]["timestamp"] = baseline + data[device_dropdown.value]["timestamp"]
+        data[device_dropdown.value]['timestamp'] = data[device_dropdown.value]['timestamp'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
+        lag_slider.value = 0  # Reset the lag slider to zero
+        print(f"Lag of {lag} seconds applied to {device_dropdown.value}")
+
+    save_button = widgets.Button(description='Save Lag')
+    save_button.on_click(save_lag)
+
+    # Observe changes and update plot
+    device_dropdown.observe(update_plot, names='value')
+    start_time_picker.observe(update_plot, names='value')
+    end_time_picker.observe(update_plot, names='value')
+    lag_slider.observe(update_plot, names='value')
+
+    # Layout the widgets
+    input_widgets = widgets.VBox([device_dropdown, start_time_picker, end_time_picker, lag_slider, save_button])
+    gui = widgets.VBox([input_widgets, out])
+
+    # Update plot
+    update_plot()
+
+    # Display the GUI
+    display(gui)
 
 ###########################################################################
 ###########################################################################
@@ -356,22 +482,6 @@ def chop_data (data, conditions, events, devices):
     data_chopped : dict
         A dictionary containing the chopped data for all devices and conditions.
     """
-    #changing dataset timestamps:
-    for device in devices:
-
-        if device == "vu":
-            data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.split('/')[-1])
-            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'], format='%H:%M:%S.%f')
-
-        else:
-
-            for i in range(np.size(data[device]['timestamp'])):
-                timestamp_float = float(data[device].loc[i, 'timestamp'])
-                data[device].loc[i, 'timestamp'] = datetime.datetime.fromtimestamp(timestamp_float / 1000)
-            data[device]['timestamp'] = pd.to_datetime(data[device]['timestamp'])
-
-        # Format timestamp column as string with format hh:mm:ss.mmm
-        data[device]['timestamp'] = data[device]['timestamp'].apply(lambda x: x.strftime('%H:%M:%S.%f')[:-3])
 
     #it contains the begening and end of each condition
     eventchopped = {}  # it contains the beginning and end of each condition
