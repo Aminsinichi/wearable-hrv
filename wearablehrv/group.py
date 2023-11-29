@@ -232,7 +232,7 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
                 decision = "Acceptable"
 
                 # check manually for missing data
-                if manual_missing and device_nibi < missing_threshold:
+                if manual_missing == True and device_nibi and device_nibi[0] < missing_threshold:
                     decision = "Missing"
                 elif not device_nibi:
                     decision = "Missing"
