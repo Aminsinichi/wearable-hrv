@@ -42,7 +42,7 @@ The oversight of these wearables' validity may stem from the absence of an integ
 
 # Main Features and Basic Usage
 
-In this section, we provide an overview of the main functions and basic usage of the `wearablehrv` pipeline. For detailed documentation of all the functions and examples on data recording and initiating validation, please refer to [README.md](https://github.com/Aminsinichi/wearable-hrv/blob/develop/README.md) and [documentation.ipynb](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb).
+In this section, we provide an overview of the main functions and basic usage of the `wearablehrv` pipeline. For detailed documentation of all the functions and examples on data recording and initiating validation, please refer to [README.md](https://github.com/Aminsinichi/wearable-hrv/blob/master/README.md) and [documentation.ipynb](https://github.com/Aminsinichi/wearable-hrv/blob/master/notebooks/documentation.ipynb).
 
 The pipeline is divided into two parts: the individual pipeline, that focuses on the data from a single individual, and the group pipeline, which combines the data from all the observations in a single study.
 
