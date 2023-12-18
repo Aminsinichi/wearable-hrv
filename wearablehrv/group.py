@@ -274,11 +274,9 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
     # Remove 'artefact' and 'nibi_after_cropping' from the features
     features.remove ('artefact')
     features.remove ('nibi_after_cropping')
-
-    # Print
-    display(quality_df)
-    display(summary_df)
-
+    
+    print ("Signal quality is assessed successfully!")  
+    
     # Save the datafiles:
     if save_as_csv == True:
         path_save_quality = path + "quality_report1.csv"  # creating the path
@@ -288,7 +286,7 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
         summary_df.to_csv(path_save_summary)
         print ("Data Saved Succesfully!")
 
-    return data, features
+    return data, features, summary_df, quality_df
 
 ###########################################################################
 ###########################################################################
