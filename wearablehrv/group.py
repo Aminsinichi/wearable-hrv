@@ -292,7 +292,7 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
 ###########################################################################
 ###########################################################################
 
-def signal_quiality_plot1 (summary_df, condition_mapping, criterion, device_selection = False, device=None, criterion_exclusion = True, x_label = "'Condition Categories"):
+def signal_quality_plot1 (summary_df, condition_mapping, criterion, device_selection = False, device=None, criterion_exclusion = True, x_label = "'Condition Categories"):
 
     """
     Generates a stacked bar plot to visualize data quality by condition category. The function can either 
@@ -387,15 +387,88 @@ def signal_quiality_plot1 (summary_df, condition_mapping, criterion, device_sele
 ###########################################################################
 ###########################################################################
 
+def signal_quality_plot2 (summary_df, conditions, devices, condition_selection = False, condition = None):
+    
+    """
+    Generates a stacked bar plot to visualize data quality by device. This function allows the option to either 
+    display data for all conditions or focus on a single specified condition. It aggregates data quality metrics 
+    ('Acceptable', 'Missing', 'Poor') for each device and displays them as percentages.
 
+    Parameters:
+    -----------
+    summary_df : DataFrame
+        A pandas DataFrame containing the summary of data quality metrics. It should have a MultiIndex with 
+        levels 'Device' and 'Condition', and columns 'Acceptable', 'Missing', and 'Poor'.
+
+    conditions : list
+        A list of strings representing all the conditions included in the summary_df.
+
+    devices : list
+        A list of strings representing all the devices included in the summary_df.
+
+    condition_selection : bool, optional
+        If True, the plot will only display data for the condition specified in the 'condition' parameter. 
+        Defaults to False.
+
+    condition : str, optional
+        The name of the condition to focus on if condition_selection is True. Ignored if condition_selection 
+        is False.
+
+    Returns:
+    --------
+    None
+        This function does not return anything. It displays the generated plot directly.
+
+    Notes:
+    ------
+    The function checks if condition_selection is True. If so, it filters the summary_df to only include 
+    data for the specified condition. It then groups the data by 'Device' and calculates the sum of 
+    'Acceptable', 'Missing', and 'Poor' metrics for each device. These counts are converted to percentages 
+    and plotted as a stacked bar chart. The function also adds text annotations to the plot for clarity and 
+    customizes the plot with a title, labels, and a legend. The legend is moved outside of the plot to avoid 
+    obscuring any data.
+    """
+    
+    if condition_selection:
+        summary_df = summary_df[summary_df.index.get_level_values('Condition') == condition].copy()
+    
+    grouped_data = summary_df.groupby('Device')[['Acceptable', 'Missing', 'Poor']].sum()
+
+    # Convert counts to percentages
+    grouped_data_percent = grouped_data.div(grouped_data.sum(axis=1), axis=0) * 100
+
+    # Plotting the stacked bar chart with custom colors
+    ax = grouped_data_percent.plot(kind='bar', stacked=True, figsize=(10, 6), 
+                                   color={'Poor': 'red', 'Acceptable': 'green', 'Missing': 'yellow'})
+    
+    if condition_selection:
+        plt.title('Data Quality by Device for {} Condition (Percentage)'.format (condition))
+    else:
+        plt.title('Data Quality by Device for All Conditions (Percentage)')
+    
+    plt.xlabel('Device')
+    plt.ylabel('Percentage')
+    plt.xticks(rotation=45)
+    plt.legend(title='Data Quality')
+
+    # Adding text annotations with corrected x-coordinate
+    for i, row in enumerate(grouped_data_percent.itertuples()):
+        cumulative_height = 0
+        for value in row[1:]:
+            if value != 0:  # This check avoids placing a label for a zero value
+                ax.text(x=i, y=cumulative_height + value/2, s=f'{value:.2f}%', 
+                        ha='center', va='center', color='black', fontsize=8)
+                cumulative_height += value
+
+    # Moving the legend outside of the plot to the right
+    plt.legend(title='Data Quality', loc='center left', bbox_to_anchor=(1, 0.5))
+
+    plt.tight_layout()
+    plt.show()
 
 ###########################################################################
 ###########################################################################
 ###########################################################################
-
-
-
-
 
 def violin_plot (data, conditions, features, devices):
 
