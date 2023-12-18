@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="wearablehrv",
-    version="0.1.9",  
+    version="0.1.10",  
     author="Amin Sinichi",
     author_email="aminsinichi@gmail.com",
     description="Wearablehrv: A Python package for the validation of heart rate and heart rate variability in wearables.",
