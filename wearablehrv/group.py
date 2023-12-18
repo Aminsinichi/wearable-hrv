@@ -1047,6 +1047,146 @@ def bar_plot (data, conditions, features, devices):
 ###########################################################################
 ###########################################################################
 ###########################################################################
+    
+def mape_analysis (data, criterion, devices, conditions, features, path=None, alpha=0.95, save_as_csv=False):
+    """
+    Calculates the Mean Absolute Percentage Error (MAPE) and its confidence intervals for each device compared to the criterion.
+    Optionally saves the results to a CSV file.
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data for each device, feature, and condition.
+    criterion : str
+        A string representing the name of the criterion device.
+    devices : list
+        A list of strings representing the different devices.
+    conditions : list
+        A list of strings representing the different conditions.
+    features : list
+        A list of strings representing the different features.
+    path : str
+        The path where the CSV file will be saved.
+    alpha : float
+        Confidence level for the intervals.
+    save_as_csv : bool
+        Flag to save the results to a CSV file.
+
+    Returns:
+    --------
+    mape_data : dict
+        A nested dictionary containing the MAPE and its confidence intervals.
+    """
+    mape_data = {device: {feature: {condition: {} for condition in conditions} for feature in features} for device in devices[:-1]}
+
+    for device in devices[:-1]:
+        for feature in features:
+            for condition in conditions:
+                device_data = data[device][feature][condition]
+                criterion_data = data[criterion][feature][condition]
+
+                abs_percent_errors = []
+                for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+                    if pp_value_device and pp_value_criterion and pp_value_criterion[0] != 0:
+                        error = abs(pp_value_device[0] - pp_value_criterion[0]) / abs(pp_value_criterion[0])
+                        abs_percent_errors.append(error * 100)  # Convert to percentage
+
+                if abs_percent_errors:
+                    mape = np.mean(abs_percent_errors)
+                    ci_lower, ci_upper = stats.t.interval(alpha, len(abs_percent_errors)-1, loc=mape, scale=stats.sem(abs_percent_errors))
+
+                    mape_data[device][feature][condition] = {'MAPE': mape, 'CI': (ci_lower, ci_upper)}
+                else:
+                    mape_data[device][feature][condition] = {'MAPE': None, 'CI': (None, None)}
+    
+    print ("MAPE is calculated successfully!")
+
+    if save_as_csv and path:
+        rows = []
+        for device in mape_data:
+            for feature in mape_data[device]:
+                for condition in mape_data[device][feature]:
+                    row_data = mape_data[device][feature][condition]
+                    rows.append([
+                        device, feature, condition,
+                        row_data['MAPE'], row_data['CI'][0], row_data['CI'][1]
+                    ])
+
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'MAPE', 'CI Lower', 'CI Upper'])
+        df.to_csv(path + 'mape_data.csv', index=False)
+        print("MAPE data saved successfully to", path + 'mape_data.csv')
+
+    
+    return mape_data
+###########################################################################
+###########################################################################
+###########################################################################
+
+def mape_plot (mape_data, features, conditions, devices):
+    """
+    Plots a grouped bar chart of MAPE for all devices for a specific feature across all conditions.
+
+    Parameters:
+    -----------
+    mape_data : dict
+        The MAPE results for each device, feature, and condition.
+    features : list
+        A list of strings representing the different features.
+    conditions : list
+        A list of strings representing the different experimental conditions.
+    devices : list
+        A list of strings representing the different devices.
+    """
+
+    def create_mape_plot(feature):
+        num_conditions = len(conditions)
+        num_devices = len(devices) - 1
+
+        bar_width = 0.15
+        opacity = 0.8
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        index = np.arange(num_conditions)
+
+        for i, device in enumerate(devices[:-1]):
+            mape_values = [mape_data[device][feature][condition]['MAPE'] for condition in conditions]
+            bars = ax.bar(index + bar_width * i, mape_values, bar_width, alpha=opacity, label=device)
+
+        ax.set_xlabel('Condition')
+        ax.set_ylabel('MAPE (%)')
+        ax.set_title(f'MAPE for {feature.capitalize()} across Conditions')
+        ax.set_xticks(index + bar_width * num_devices / 2)
+        ax.set_xticklabels(conditions)
+        ax.legend()
+
+        ax.yaxis.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+
+        plt.tight_layout()
+        plt.show()
+
+    def update_mape_plot(*args):
+        feature = feature_dropdown.value
+
+        with out:
+            clear_output(wait=True)
+            create_mape_plot(feature)
+
+    feature_dropdown = widgets.Dropdown(
+        options=features,
+        value=features[0],
+        description='Feature:',
+        disabled=False,
+    )
+
+    feature_dropdown.observe(update_mape_plot, names='value')
+
+    out = widgets.Output()
+    display(widgets.VBox([feature_dropdown, out]))
+    update_mape_plot()
+
+###########################################################################
+###########################################################################
+###########################################################################
 
 def regression_analysis (data, criterion, conditions, devices, features, path, save_as_csv=False):
 
