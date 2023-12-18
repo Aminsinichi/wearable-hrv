@@ -2051,7 +2051,7 @@ def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, fe
             mean_vals, diff_vals = zip(*mean_diff_pairs)
 
             md = np.mean(diff_vals)
-            sd = np.std(diff_vals, axis=0)
+            sd = np.std(diff_vals, axis=0, ddof=1)
 
             loa_upper = md + agreement_bound * sd
             loa_lower = md - agreement_bound * sd
