@@ -27,7 +27,7 @@
 
 For an in-depth explanation of the package and sample data, please refer to:
 
-[![Documentation](https://img.shields.io/badge/Read-Documentation-blue)](https://github.com/Aminsinichi/wearable-hrv/blob/develop/notebooks/documentation.ipynb)
+[![Documentation](https://img.shields.io/badge/Read-Documentation-blue)](https://github.com/Aminsinichi/wearable-hrv/blob/master/notebooks/documentation.ipynb)
 
 # Questions
 
@@ -109,7 +109,7 @@ The repository can be cloned:
 
 # Development
 
-`wearablehrv` was developed by Amin Sinichi <https://github.com/AminSinichi>, during his PhD at Vrije Universiteit Amsterdam in Psychophysiology and Neuropsychology.  
+`wearablehrv` was developed by Amin Sinichi <https://orcid.org/0009-0008-2491-1542>, during his PhD at Vrije Universiteit Amsterdam in Psychophysiology and Neuropsychology.  
 
 **Contributors**
 

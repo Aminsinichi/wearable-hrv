@@ -162,11 +162,12 @@ def save_data (data, path, conditions, devices, features, file_names):
 ###########################################################################
 ###########################################################################
 
-def signal_quality (data, path, conditions, devices, features, criterion,  file_names, exclude = False, save_as_csv = True, ibi_threshold = 0.20, artefact_threshold = 0.20):
+def signal_quality (data, path, conditions, devices, features, criterion,  file_names, exclude = False, save_as_csv = True, ibi_threshold = 0.20, artefact_threshold = 0.20, manual_missing=False, missing_threshold=10):
 
     """
     Analyze the signal quality of the data and generate a quality report. The function processes data from multiple
-    devices and conditions, and uses a thresholding method to exclude participants with poor signal quality.
+    devices and conditions, and uses a thresholding method to exclude participants with poor signal quality or manually 
+    flag data as missing based on the number of detected beats.
 
     Parameters:
     -----------
@@ -203,6 +204,13 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
     artefact_threshold : float, optional
         A threshold for comparing a device's artefact value with the device's nibi value. Defaults to 0.20.
 
+    manual_missing : bool, optional
+        A flag indicating whether to manually flag data as missing based on the number of detected beats. Defaults to False.
+
+    missing_threshold : int, optional
+        The threshold for the number of detected beats below which data is flagged as missing when manual_missing is True. 
+        Defaults to 10.
+
     Returns:
     --------
     tuple : (dict, list)
@@ -223,7 +231,10 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
 
                 decision = "Acceptable"
 
-                if not device_nibi:
+                # check manually for missing data
+                if manual_missing == True and device_nibi and device_nibi[0] < missing_threshold:
+                    decision = "Missing"
+                elif not device_nibi:
                     decision = "Missing"
                 else:
                     device_nibi_val = device_nibi[0]
