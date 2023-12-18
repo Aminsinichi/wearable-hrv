@@ -1362,6 +1362,48 @@ def regression_analysis (data, criterion, conditions, devices, features, path, s
 ###########################################################################
 ###########################################################################
 
+def bonferroni_correction_regression (regression_data, alpha=0.05):
+    """
+    Applies the Bonferroni correction to the p-values in the regression analysis results.
+
+    Parameters:
+    -----------
+    regression_data : dict
+        A nested dictionary containing the regression results for each device, feature, and condition.
+    alpha : float, optional, default: 0.05
+        The significance level for the tests.
+
+    Returns:
+    --------
+    corrected_regression_data : dict
+        The regression data with Bonferroni corrected p-values.
+    """
+    corrected_regression_data = regression_data.copy()
+    total_tests = sum(len(regression_data[device][feature][condition]) 
+                      for device in regression_data 
+                      for feature in regression_data[device] 
+                      for condition in regression_data[device][feature] 
+                      if regression_data[device][feature][condition])
+
+    corrected_alpha = alpha / total_tests
+
+    for device in regression_data:
+        for feature in regression_data[device]:
+            for condition in regression_data[device][feature]:
+                if regression_data[device][feature][condition]:
+                    original_p_value = regression_data[device][feature][condition].get('p_value', 1)
+                    corrected_p_value = min(original_p_value * total_tests, 1)  # Ensures p-value doesn't exceed 1
+                    corrected_regression_data[device][feature][condition]['corrected_p_value'] = corrected_p_value
+                    corrected_regression_data[device][feature][condition]['is_significant'] = corrected_p_value < corrected_alpha
+
+    
+    print("Bonferroni correction is done successfully")
+    return corrected_regression_data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
 def regression_plot(regression_data, data, criterion, conditions, devices, features,
                            width=15, height_per_condition=4, 
                            regression_line_style='-', regression_line_color='black', 
