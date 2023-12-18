@@ -1397,7 +1397,7 @@ def bonferroni_correction_regression (regression_data, alpha=0.05):
                     corrected_regression_data[device][feature][condition]['is_significant'] = corrected_p_value < corrected_alpha
 
     
-    print("Bonferroni correction is done successfully")
+    print("Bonferroni correction is done for regression data successfully")
     return corrected_regression_data
 
 ###########################################################################
@@ -1709,6 +1709,50 @@ def icc_analysis (data, criterion, devices, conditions, features, path, save_as_
         print("ICC data saved successfully!")
 
     return icc_data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def bonferroni_correction_icc(icc_data, alpha=0.05):
+    """
+    Applies the Bonferroni correction to the p-values in the ICC analysis results.
+
+    Parameters:
+    -----------
+    icc_data : dict
+        A nested dictionary containing the ICC results for each device, feature, and condition.
+    alpha : float, optional, default: 0.05
+        The significance level for the tests.
+
+    Returns:
+    --------
+    corrected_icc_data : dict
+        The ICC data with Bonferroni corrected p-values.
+    """
+    corrected_icc_data = icc_data.copy()
+    total_tests = sum(
+        1 for device in icc_data 
+        for feature in icc_data[device] 
+        for condition in icc_data[device][feature]
+        if icc_data[device][feature][condition] is not None
+    )
+
+    corrected_alpha = alpha / total_tests
+
+    for device in icc_data:
+        for feature in icc_data[device]:
+            for condition in icc_data[device][feature]:
+                icc_result = icc_data[device][feature][condition]
+                if icc_result is not None:
+                    for index, icc_row in icc_result.iterrows():
+                        original_p_value = icc_row['pval']
+                        corrected_p_value = min(original_p_value * total_tests, 1)  # Ensuring p-value doesn't exceed 1
+                        corrected_icc_data[device][feature][condition].at[index, 'corrected_pval'] = corrected_p_value
+                        corrected_icc_data[device][feature][condition].at[index, 'is_significant'] = corrected_p_value < corrected_alpha
+
+    print("Bonferroni correction is done for icc data successfully!")
+    return corrected_icc_data
 
 ###########################################################################
 ###########################################################################
