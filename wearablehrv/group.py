@@ -274,11 +274,9 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
     # Remove 'artefact' and 'nibi_after_cropping' from the features
     features.remove ('artefact')
     features.remove ('nibi_after_cropping')
-
-    # Print
-    display(quality_df)
-    display(summary_df)
-
+    
+    print ("Signal quality is assessed successfully!")  
+    
     # Save the datafiles:
     if save_as_csv == True:
         path_save_quality = path + "quality_report1.csv"  # creating the path
@@ -288,7 +286,185 @@ def signal_quality (data, path, conditions, devices, features, criterion,  file_
         summary_df.to_csv(path_save_summary)
         print ("Data Saved Succesfully!")
 
-    return data, features
+    return data, features, summary_df, quality_df
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def signal_quality_plot1 (summary_df, condition_mapping, criterion, device_selection = False, device=None, criterion_exclusion = True, x_label = "'Condition Categories"):
+
+    """
+    Generates a stacked bar plot to visualize data quality by condition category. The function can either 
+    display data for all devices or focus on a single specified device, and it has the option to exclude data 
+    from the criterion device. The data quality metrics ('Acceptable', 'Missing', 'Poor') are aggregated from 
+    the summary DataFrame for each condition category and displayed as percentages.
+
+    Parameters:
+    -----------
+    summary_df : DataFrame
+        A pandas DataFrame containing the summary of data quality metrics. It should have a MultiIndex with 
+        levels 'Device' and 'Condition', and columns 'Acceptable', 'Missing', and 'Poor'.
+
+    condition_mapping : dict
+        A dictionary mapping each condition to its respective category. Keys should correspond to conditions 
+        in summary_df's index, and values should be the desired category names.
+
+    criterion : str
+        The name of the criterion device. Used to exclude data from this device if criterion_exclusion is True.
+
+    device_selection : bool, optional
+        If True, the plot will only display data for the device specified in the 'device' parameter. Defaults to False.
+
+    device : str, optional
+        The name of the device to focus on if device_selection is True. Ignored if device_selection is False.
+
+    criterion_exclusion : bool, optional
+        If True, data from the criterion device will be excluded from the plot. Defaults to True.
+
+    x_label : str, optional
+        The label for the x-axis of the plot. Defaults to "'Condition Categories'".
+
+    Returns:
+    --------
+    None
+        This function does not return anything. It displays the generated plot directly.
+
+    Notes:
+    ------
+    The function first checks for the criterion device in the 'Device' level of the summary_df's MultiIndex. If 
+    criterion_exclusion is True, data from this device is excluded. If device_selection is True, the function 
+    further filters the summary_df to only include data from the specified device. It then maps each condition 
+    to its respective category using the provided condition_mapping and groups the data by these categories. The 
+    quality metrics are then converted to percentages and plotted as a stacked bar chart. The function also adds 
+    text annotations to the plot to display the percentage values and customizes the plot with labels, title, and 
+    legend.
+    """    
+
+    if criterion_exclusion:
+        summary_df = summary_df[summary_df.index.get_level_values('Device') != criterion].copy()
+        
+    if device_selection:
+        summary_df = summary_df[summary_df.index.get_level_values('Device') == device].copy()
+
+    # Apply the mapping to create a new column for condition categories
+    summary_df['Condition Category'] = summary_df.index.get_level_values('Condition').map(condition_mapping)
+
+    # Grouping by new condition category
+    grouped_by_condition = summary_df.groupby('Condition Category')[['Acceptable', 'Missing', 'Poor']].sum()
+
+    # Convert counts to percentages
+    grouped_by_condition_percent = grouped_by_condition.div(grouped_by_condition.sum(axis=1), axis=0) * 100
+
+
+    # Plotting
+    ax = grouped_by_condition_percent.plot(kind='bar', stacked=True, figsize=(10, 6),
+                                           color={'Poor': 'red', 'Acceptable': 'green', 'Missing': 'yellow'})
+    if device_selection:
+        plt.title("Data Quality for {} Device (Percentage)".format (device))
+    else:
+        plt.title("Data Quality for All Devices (Percentage)")
+    plt.xlabel(x_label)
+    plt.ylabel('Percentage')
+    plt.legend(title='Data Quality')
+
+    # Adding text annotations
+    for i, row in enumerate(grouped_by_condition_percent.itertuples()):
+        cumulative_height = 0
+        for value in row[1:]:
+            if value != 0:
+                ax.text(x=i, y=cumulative_height + value/2, s=f'{value:.2f}%', 
+                        ha='center', va='center', color='black', fontsize=8)
+                cumulative_height += value
+
+    # Moving the legend
+    plt.legend(title='Data Quality', loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.tick_params(axis='x', rotation=0)
+    plt.tight_layout()
+    plt.show()
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def signal_quality_plot2 (summary_df, conditions, devices, condition_selection = False, condition = None):
+    
+    """
+    Generates a stacked bar plot to visualize data quality by device. This function allows the option to either 
+    display data for all conditions or focus on a single specified condition. It aggregates data quality metrics 
+    ('Acceptable', 'Missing', 'Poor') for each device and displays them as percentages.
+
+    Parameters:
+    -----------
+    summary_df : DataFrame
+        A pandas DataFrame containing the summary of data quality metrics. It should have a MultiIndex with 
+        levels 'Device' and 'Condition', and columns 'Acceptable', 'Missing', and 'Poor'.
+
+    conditions : list
+        A list of strings representing all the conditions included in the summary_df.
+
+    devices : list
+        A list of strings representing all the devices included in the summary_df.
+
+    condition_selection : bool, optional
+        If True, the plot will only display data for the condition specified in the 'condition' parameter. 
+        Defaults to False.
+
+    condition : str, optional
+        The name of the condition to focus on if condition_selection is True. Ignored if condition_selection 
+        is False.
+
+    Returns:
+    --------
+    None
+        This function does not return anything. It displays the generated plot directly.
+
+    Notes:
+    ------
+    The function checks if condition_selection is True. If so, it filters the summary_df to only include 
+    data for the specified condition. It then groups the data by 'Device' and calculates the sum of 
+    'Acceptable', 'Missing', and 'Poor' metrics for each device. These counts are converted to percentages 
+    and plotted as a stacked bar chart. The function also adds text annotations to the plot for clarity and 
+    customizes the plot with a title, labels, and a legend. The legend is moved outside of the plot to avoid 
+    obscuring any data.
+    """
+    
+    if condition_selection:
+        summary_df = summary_df[summary_df.index.get_level_values('Condition') == condition].copy()
+    
+    grouped_data = summary_df.groupby('Device')[['Acceptable', 'Missing', 'Poor']].sum()
+
+    # Convert counts to percentages
+    grouped_data_percent = grouped_data.div(grouped_data.sum(axis=1), axis=0) * 100
+
+    # Plotting the stacked bar chart with custom colors
+    ax = grouped_data_percent.plot(kind='bar', stacked=True, figsize=(10, 6), 
+                                   color={'Poor': 'red', 'Acceptable': 'green', 'Missing': 'yellow'})
+    
+    if condition_selection:
+        plt.title('Data Quality by Device for {} Condition (Percentage)'.format (condition))
+    else:
+        plt.title('Data Quality by Device for All Conditions (Percentage)')
+    
+    plt.xlabel('Device')
+    plt.ylabel('Percentage')
+    plt.xticks(rotation=45)
+    plt.legend(title='Data Quality')
+
+    # Adding text annotations with corrected x-coordinate
+    for i, row in enumerate(grouped_data_percent.itertuples()):
+        cumulative_height = 0
+        for value in row[1:]:
+            if value != 0:  # This check avoids placing a label for a zero value
+                ax.text(x=i, y=cumulative_height + value/2, s=f'{value:.2f}%', 
+                        ha='center', va='center', color='black', fontsize=8)
+                cumulative_height += value
+
+    # Moving the legend outside of the plot to the right
+    plt.legend(title='Data Quality', loc='center left', bbox_to_anchor=(1, 0.5))
+
+    plt.tight_layout()
+    plt.show()
 
 ###########################################################################
 ###########################################################################
@@ -871,6 +1047,243 @@ def bar_plot (data, conditions, features, devices):
 ###########################################################################
 ###########################################################################
 ###########################################################################
+    
+def mape_analysis (data, criterion, devices, conditions, features, path=None, alpha=0.95, save_as_csv=False):
+    """
+    Calculates the Mean Absolute Percentage Error (MAPE) and its confidence intervals for each device compared to the criterion.
+    Optionally saves the results to a CSV file.
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data for each device, feature, and condition.
+    criterion : str
+        A string representing the name of the criterion device.
+    devices : list
+        A list of strings representing the different devices.
+    conditions : list
+        A list of strings representing the different conditions.
+    features : list
+        A list of strings representing the different features.
+    path : str
+        The path where the CSV file will be saved.
+    alpha : float
+        Confidence level for the intervals.
+    save_as_csv : bool
+        Flag to save the results to a CSV file.
+
+    Returns:
+    --------
+    mape_data : dict
+        A nested dictionary containing the MAPE and its confidence intervals.
+    """
+    mape_data = {device: {feature: {condition: {} for condition in conditions} for feature in features} for device in devices[:-1]}
+
+    for device in devices[:-1]:
+        for feature in features:
+            for condition in conditions:
+                device_data = data[device][feature][condition]
+                criterion_data = data[criterion][feature][condition]
+
+                abs_percent_errors = []
+                for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+                    if pp_value_device and pp_value_criterion and pp_value_criterion[0] != 0:
+                        error = abs(pp_value_device[0] - pp_value_criterion[0]) / abs(pp_value_criterion[0])
+                        abs_percent_errors.append(error * 100)  # Convert to percentage
+
+                if abs_percent_errors:
+                    mape = np.mean(abs_percent_errors)
+                    ci_lower, ci_upper = stats.t.interval(alpha, len(abs_percent_errors)-1, loc=mape, scale=stats.sem(abs_percent_errors))
+
+                    mape_data[device][feature][condition] = {'MAPE': mape, 'CI': (ci_lower, ci_upper)}
+                else:
+                    mape_data[device][feature][condition] = {'MAPE': None, 'CI': (None, None)}
+    
+    print ("MAPE is calculated successfully!")
+
+    if save_as_csv and path:
+        rows = []
+        for device in mape_data:
+            for feature in mape_data[device]:
+                for condition in mape_data[device][feature]:
+                    row_data = mape_data[device][feature][condition]
+                    rows.append([
+                        device, feature, condition,
+                        row_data['MAPE'], row_data['CI'][0], row_data['CI'][1]
+                    ])
+
+        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'MAPE', 'CI Lower', 'CI Upper'])
+        df.to_csv(path + 'mape_data.csv', index=False)
+        print("MAPE data saved successfully to", path + 'mape_data.csv')
+
+    
+    return mape_data
+###########################################################################
+###########################################################################
+###########################################################################
+
+def mape_plot (mape_data, features, conditions, devices):
+    """
+    Plots a grouped bar chart of MAPE for all devices for a specific feature across all conditions.
+
+    Parameters:
+    -----------
+    mape_data : dict
+        The MAPE results for each device, feature, and condition.
+    features : list
+        A list of strings representing the different features.
+    conditions : list
+        A list of strings representing the different experimental conditions.
+    devices : list
+        A list of strings representing the different devices.
+    """
+
+    def create_mape_plot(feature):
+        num_conditions = len(conditions)
+        num_devices = len(devices) - 1
+
+        bar_width = 0.15
+        opacity = 0.8
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        index = np.arange(num_conditions)
+
+        for i, device in enumerate(devices[:-1]):
+            mape_values = [mape_data[device][feature][condition]['MAPE'] for condition in conditions]
+            bars = ax.bar(index + bar_width * i, mape_values, bar_width, alpha=opacity, label=device)
+
+        ax.set_xlabel('Condition')
+        ax.set_ylabel('MAPE (%)')
+        ax.set_title(f'MAPE for {feature.capitalize()} across Conditions')
+        ax.set_xticks(index + bar_width * num_devices / 2)
+        ax.set_xticklabels(conditions)
+        ax.legend()
+
+        ax.yaxis.grid(True, linestyle='--', which='major', color='grey', alpha=0.5)
+
+        plt.tight_layout()
+        plt.show()
+
+    def update_mape_plot(*args):
+        feature = feature_dropdown.value
+
+        with out:
+            clear_output(wait=True)
+            create_mape_plot(feature)
+
+    feature_dropdown = widgets.Dropdown(
+        options=features,
+        value=features[0],
+        description='Feature:',
+        disabled=False,
+    )
+
+    feature_dropdown.observe(update_mape_plot, names='value')
+
+    out = widgets.Output()
+    display(widgets.VBox([feature_dropdown, out]))
+    update_mape_plot()
+
+###########################################################################
+###########################################################################
+###########################################################################
+    
+def check_normality (data, conditions, devices, features, alpha=0.05):
+    """
+    This function analyzes the normality of data using the Shapiro-Wilk test and summarizes conditions requiring transformations for selected features.
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data, with keys for devices, features, and conditions.
+    conditions : list
+        A list of strings representing the different experimental conditions of the data.
+    devices : list
+        A list of strings representing the different devices used to collect the data.
+    features : list
+        A list of strings representing the different features of the data.
+    selected_features : list
+        A list of strings representing specific features to summarize for transformations.
+    alpha : float, optional, default: 0.05
+        The significance level for the Shapiro-Wilk test.
+
+    Returns:
+    --------
+    normality_results : dict
+        A nested dictionary containing the results of the Shapiro-Wilk test for each device, feature, and condition.
+    suggestions : dict
+        A nested dictionary suggesting transformations if data is not normally distributed.
+    transformation_summary : dict
+        A dictionary summarizing conditions that require a transformation for each device and selected feature.
+    """
+    normality_results = {device: {feature: {condition: {} for condition in conditions} for feature in features} for device in devices}
+    suggestions = {device: {feature: {condition: "" for condition in conditions} for feature in features} for device in devices}
+    transformation_summary = {device: {feature: [] for feature in features} for device in devices}
+
+    for device in devices:
+        for feature in features:
+            for condition in conditions:
+                data_values = [val[0] for val in data[device][feature][condition].values() if val]
+
+                if data_values:
+                    stat, p = stats.shapiro(data_values)
+                    normality_result = {'p_value': p, 'is_normal': p > alpha}
+                    normality_results[device][feature][condition] = normality_result
+
+                    # Update suggestions
+                    if p <= alpha:
+                        suggestion = "Consider Box-Cox transformation." if not np.all(np.array(data_values) >= 0) else "Consider log or square root transformation."
+                        suggestions[device][feature][condition] = suggestion
+
+                    # Update transformation summary for features
+                    if feature in features and not normality_result['is_normal']:
+                        transformation_summary[device][feature].append(condition)
+                else:
+                    normality_results[device][feature][condition] = {'p_value': None, 'is_normal': None}
+                    suggestions[device][feature][condition] = "Data unavailable for normality test."
+
+    print ("Normality check is done successfully!")
+    return normality_results, suggestions, transformation_summary
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def log_transform_data(data, devices, transform_features):
+    """
+    Applies a log transformation to the 'rmssd' and 'hf' features in the data for all devices and conditions.
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data, with keys for devices, features, and conditions.
+    devices : list
+        A list of strings representing the different devices used to collect the data.
+    transform_features : list
+        A list of strings representing the specific features to transform ('rmssd', 'hf').
+
+    Returns:
+    --------
+    None - the function updates the 'data' dictionary in place.
+    """
+    for device in devices:
+        for feature in transform_features:
+            for condition in data[device][feature]:
+                original_values = data[device][feature][condition]
+
+                # Apply log transformation to each participant's data, ensuring values are positive
+                for participant in original_values:
+                    participant_data = original_values[participant]
+                    transformed_data = [np.log(value) for value in participant_data if value > 0]
+
+                    # Update the data dictionary with the transformed data
+                    data[device][feature][condition][participant] = transformed_data
+    
+    print ("Selected features are log-transformed successfully!")
+
+###########################################################################
+###########################################################################
+###########################################################################
 
 def regression_analysis (data, criterion, conditions, devices, features, path, save_as_csv=False):
 
@@ -949,13 +1362,56 @@ def regression_analysis (data, criterion, conditions, devices, features, path, s
 ###########################################################################
 ###########################################################################
 
-def regression_plot(regression_data, data, criterion, conditions, devices, features,
-                           width=15, height_per_condition=4, 
-                           regression_line_style='-', regression_line_color='black', 
-                           marker_color='gray', font_size=12, 
-                           show_grid=True, background_color=None):
+def bonferroni_correction_regression (regression_data, alpha=0.05):
     """
-    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, significance values, and the number of observations.
+    Applies the Bonferroni correction to the p-values in the regression analysis results.
+
+    Parameters:
+    -----------
+    regression_data : dict
+        A nested dictionary containing the regression results for each device, feature, and condition.
+    alpha : float, optional, default: 0.05
+        The significance level for the tests.
+
+    Returns:
+    --------
+    corrected_regression_data : dict
+        The regression data with Bonferroni corrected p-values.
+    """
+    corrected_regression_data = regression_data.copy()
+    total_tests = sum(len(regression_data[device][feature][condition]) 
+                      for device in regression_data 
+                      for feature in regression_data[device] 
+                      for condition in regression_data[device][feature] 
+                      if regression_data[device][feature][condition])
+
+    corrected_alpha = alpha / total_tests
+
+    for device in regression_data:
+        for feature in regression_data[device]:
+            for condition in regression_data[device][feature]:
+                if regression_data[device][feature][condition]:
+                    original_p_value = regression_data[device][feature][condition].get('p_value', 1)
+                    corrected_p_value = min(original_p_value * total_tests, 1)  # Ensures p-value doesn't exceed 1
+                    corrected_regression_data[device][feature][condition]['corrected_p_value'] = corrected_p_value
+                    corrected_regression_data[device][feature][condition]['is_significant'] = corrected_p_value < corrected_alpha
+
+    
+    print("Bonferroni correction is done for regression data successfully")
+    return corrected_regression_data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def regression_plot(regression_data, data, criterion, conditions, devices, features,
+                    width=15, height_per_condition=4, 
+                    regression_line_style='-', regression_line_color='black', 
+                    marker_color='gray', font_size=12, 
+                    show_grid=True, background_color=None, 
+                    bonferroni_corrected=False):  
+    """
+    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, significance values (with an option to indicate if they are Bonferroni corrected), and the number of observations.
 
     Parameters:
     -----------
@@ -987,21 +1443,23 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
         Whether to display gridlines on the plot.
     background_color : str, optional
         Background color for the plot, if specified.
+    bonferroni_corrected : bool, optional, default: False
+        Indicates if the data has Bonferroni corrected p-values. If True, the function will use Bonferroni corrected p-values for significance annotations.
 
     Returns:
     --------
     None
     """
     plt.rcParams.update({'font.size': font_size})
-    
+
     def create_scatter_plots(device, feature):
         num_conditions = len(conditions)
-        fig, axs = plt.subplots(num_conditions, 1, figsize=(width, height_per_condition*num_conditions))
-        
+        fig, axs = plt.subplots(num_conditions, 1, figsize=(width, height_per_condition * num_conditions))
+
         # Make sure axs is always a list, even if there's only one condition
         if num_conditions == 1:
             axs = [axs]
-        
+
         for c, condition in enumerate(conditions):
             device_data = data[device][feature][condition]
             criterion_data = data[criterion][feature][condition]
@@ -1009,7 +1467,7 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
             filtered_data_device = []
             filtered_data_criterion = []
 
-            for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+            for pp_value_device, pp_value_criterion in zip(device_data.values(), criterion_data.values()):
                 if pp_value_device and pp_value_criterion:
                     filtered_data_device.append(pp_value_device[0])
                     filtered_data_criterion.append(pp_value_criterion[0])
@@ -1017,7 +1475,8 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
             slope = regression_data[device][feature][condition]['slope']
             intercept = regression_data[device][feature][condition]['intercept']
             r_value = regression_data[device][feature][condition]['r_value']
-            p_value = regression_data[device][feature][condition]['p_value']
+            p_value_key = 'corrected_p_value' if bonferroni_corrected else 'p_value' # It checks if p-values are corrected or not, then take the correct corresponding value from the dic
+            p_value = regression_data[device][feature][condition][p_value_key]
 
             axs[c].scatter(filtered_data_device, filtered_data_criterion, alpha=0.8, color=marker_color)
             axs[c].set_xlabel(device if c == num_conditions - 1 else "")
@@ -1027,23 +1486,25 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
             # Regression line
             x = np.array(filtered_data_device)
             axs[c].plot(x, intercept + slope * x, regression_line_style, color=regression_line_color, 
-                        label='y={:.2f}x+{:.2f}'.format(slope, intercept))
-            
+                        label=f'y={slope:.2f}x+{intercept:.2f}')
+
             # Correlation coefficient and significance
-            n = len(filtered_data_device)  # Number of observations
-            axs[c].annotate(f"r = {r_value:.2f}, p = {p_value:.2f}, n = {n}", (0.05, 0.9), xycoords='axes fraction')
-            
+            correction_annotation = ' (Bonferroni corrected)' if bonferroni_corrected else ''
+            n = len(filtered_data_device)
+            axs[c].annotate(f'r = {r_value:.2f}, p = {p_value:.2f}{correction_annotation}, n = {n}', 
+                            (0.05, 0.9), xycoords='axes fraction')
+
             # Optional Grid
             if show_grid:
                 axs[c].grid(True, which='both', linestyle='--', linewidth=0.5)
-            
+
             # Background color
             if background_color:
                 axs[c].set_facecolor(background_color)
-        
-        fig.suptitle(f"Regression between {device.capitalize()} and {criterion.capitalize()} for {feature.capitalize()}", 
+
+        fig.suptitle(f'Regression between {device.capitalize()} and {criterion.capitalize()} for {feature.capitalize()}', 
                      fontsize=16 + 2, y=1.02)
-        plt.tight_layout()  # to avoid overlaps
+        plt.tight_layout() # to avoid overlaps
         plt.show()
 
     def update_scatter_plots(*args):
@@ -1253,6 +1714,50 @@ def icc_analysis (data, criterion, devices, conditions, features, path, save_as_
 ###########################################################################
 ###########################################################################
 
+def bonferroni_correction_icc(icc_data, alpha=0.05):
+    """
+    Applies the Bonferroni correction to the p-values in the ICC analysis results.
+
+    Parameters:
+    -----------
+    icc_data : dict
+        A nested dictionary containing the ICC results for each device, feature, and condition.
+    alpha : float, optional, default: 0.05
+        The significance level for the tests.
+
+    Returns:
+    --------
+    corrected_icc_data : dict
+        The ICC data with Bonferroni corrected p-values.
+    """
+    corrected_icc_data = icc_data.copy()
+    total_tests = sum(
+        1 for device in icc_data 
+        for feature in icc_data[device] 
+        for condition in icc_data[device][feature]
+        if icc_data[device][feature][condition] is not None
+    )
+
+    corrected_alpha = alpha / total_tests
+
+    for device in icc_data:
+        for feature in icc_data[device]:
+            for condition in icc_data[device][feature]:
+                icc_result = icc_data[device][feature][condition]
+                if icc_result is not None:
+                    for index, icc_row in icc_result.iterrows():
+                        original_p_value = icc_row['pval']
+                        corrected_p_value = min(original_p_value * total_tests, 1)  # Ensuring p-value doesn't exceed 1
+                        corrected_icc_data[device][feature][condition].at[index, 'corrected_pval'] = corrected_p_value
+                        corrected_icc_data[device][feature][condition].at[index, 'is_significant'] = corrected_p_value < corrected_alpha
+
+    print("Bonferroni correction is done for icc data successfully!")
+    return corrected_icc_data
+
+###########################################################################
+###########################################################################
+###########################################################################
+
 def icc_plot(icc_data, conditions, devices, features, font_size=12, cmap="coolwarm"):
 
     """
@@ -1347,10 +1852,10 @@ def icc_plot(icc_data, conditions, devices, features, font_size=12, cmap="coolwa
 ###########################################################################
 ###########################################################################
 
-def blandaltman_analysis (data, criterion, devices, conditions, features, path, save_as_csv=False):
-
+def blandaltman_analysis(data, criterion, devices, conditions, features, path, save_as_csv=False):
     """
     This function calculates the Bland-Altman analysis for each device compared to the criterion device, for each condition and feature.
+    It now also includes the 95% Confidence Interval for bias and Limits of Agreements.
 
     Parameters:
     -----------
@@ -1371,13 +1876,13 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
         A nested dictionary containing the Bland-Altman results for each device, feature, and condition.
     """
 
-    # Defining empty dictionaries to save Bland-Altman data analysis
+# Defining empty dictionaries to save Bland-Altman data analysis
     blandaltman_data = {device: {feature: {condition: {} for condition in conditions} for feature in features} for device in devices[:-1]}
 
     for device in devices[:-1]:
         for feature in features:
             for condition in conditions:
-                # Check for matching values between the criterion and device
+# Check for matching values between the criterion and device
                 device_data = data[device][feature][condition]
                 criterion_data = data[criterion][feature][condition]
 
@@ -1391,18 +1896,34 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
 
                 # Calculate Bland-Altman if there are matching values
                 if filtered_data_device and filtered_data_criterion:
-                    bias = np.mean(np.array(filtered_data_device) - np.array(filtered_data_criterion))
-                    sd = np.std(np.array(filtered_data_device) - np.array(filtered_data_criterion))
+                    differences = np.array(filtered_data_device) - np.array(filtered_data_criterion)
+                    bias = np.mean(differences)
+                    sd = np.std(differences, ddof=1)
                     limits_of_agreement = (bias - 1.96*sd, bias + 1.96*sd)
-                    blandaltman = {'bias': bias, 'sd': sd, 'limits_of_agreement': limits_of_agreement}
+
+                    # Calculate 95% CI for bias
+                    bias_ci = stats.t.interval(0.95, len(differences)-1, loc=bias, scale=stats.sem(differences))
+
+                    # Calculate 95% CI for LoAs
+                    loa_sd = sd / np.sqrt(len(differences))
+                    lower_loa_ci = limits_of_agreement[0] - 1.96 * loa_sd, limits_of_agreement[0] + 1.96 * loa_sd
+                    upper_loa_ci = limits_of_agreement[1] - 1.96 * loa_sd, limits_of_agreement[1] + 1.96 * loa_sd
+
+                    blandaltman = {
+                        'bias': bias, 'sd': sd, 
+                        'limits_of_agreement': limits_of_agreement,
+                        'bias_95_CI': bias_ci,
+                        'lower_loa_95_CI': lower_loa_ci,
+                        'upper_loa_95_CI': upper_loa_ci
+                    }
                     blandaltman_data[device][feature][condition] = blandaltman
                 else:
                     blandaltman_data[device][feature][condition] = None
 
-    print("Done Successfully!")
+    print(" Bland-Altman Analysis Done Successfully!")
 
     if save_as_csv:
-        # Convert nested dictionary to a list of rows
+    # Convert nested dictionary to a list of rows
         rows = []
         for device in blandaltman_data:
             for feature in blandaltman_data[device]:
@@ -1412,15 +1933,22 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
                         rows.append([
                             device, feature, condition,
                             row_data['bias'], row_data['sd'],
-                            row_data['limits_of_agreement'][0], row_data['limits_of_agreement'][1]
+                            row_data['limits_of_agreement'][0], row_data['limits_of_agreement'][1],
+                            row_data['bias_95_CI'][0], row_data['bias_95_CI'][1],
+                            row_data['lower_loa_95_CI'][0], row_data['lower_loa_95_CI'][1],
+                            row_data['upper_loa_95_CI'][0], row_data['upper_loa_95_CI'][1]
                         ])
                     else:
-                        rows.append([device, feature, condition, None, None, None, None])
+                        rows.append([device, feature, condition] + [None] * 10)
 
-        # Convert list of rows to DataFrame
-        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'Bias', 'SD', 'Lower Limit of Agreement', 'Upper Limit of Agreement'])
+        df = pd.DataFrame(rows, columns=[
+            'Device', 'Feature', 'Condition', 'Bias', 'SD', 
+            'Lower Limit of Agreement', 'Upper Limit of Agreement',
+            'Bias 95% CI Lower', 'Bias 95% CI Upper',
+            'Lower LoA 95% CI Lower', 'Lower LoA 95% CI Upper',
+            'Upper LoA 95% CI Lower', 'Upper LoA 95% CI Upper'
+        ])
         
-        # Save DataFrame to CSV
         df.to_csv(path+'blandaltman_data.csv', index=False)
         print("Blandaltman Data saved successfully!")
         
@@ -1523,7 +2051,7 @@ def blandaltman_plot (blandaltman_data, data, criterion, conditions, devices, fe
             mean_vals, diff_vals = zip(*mean_diff_pairs)
 
             md = np.mean(diff_vals)
-            sd = np.std(diff_vals, axis=0)
+            sd = np.std(diff_vals, axis=0, ddof=1)
 
             loa_upper = md + agreement_bound * sd
             loa_lower = md - agreement_bound * sd
