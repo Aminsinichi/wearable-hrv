@@ -1187,6 +1187,103 @@ def mape_plot (mape_data, features, conditions, devices):
 ###########################################################################
 ###########################################################################
 ###########################################################################
+    
+def check_normality (data, conditions, devices, features, alpha=0.05):
+    """
+    This function analyzes the normality of data using the Shapiro-Wilk test and summarizes conditions requiring transformations for selected features.
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data, with keys for devices, features, and conditions.
+    conditions : list
+        A list of strings representing the different experimental conditions of the data.
+    devices : list
+        A list of strings representing the different devices used to collect the data.
+    features : list
+        A list of strings representing the different features of the data.
+    selected_features : list
+        A list of strings representing specific features to summarize for transformations.
+    alpha : float, optional, default: 0.05
+        The significance level for the Shapiro-Wilk test.
+
+    Returns:
+    --------
+    normality_results : dict
+        A nested dictionary containing the results of the Shapiro-Wilk test for each device, feature, and condition.
+    suggestions : dict
+        A nested dictionary suggesting transformations if data is not normally distributed.
+    transformation_summary : dict
+        A dictionary summarizing conditions that require a transformation for each device and selected feature.
+    """
+    normality_results = {device: {feature: {condition: {} for condition in conditions} for feature in features} for device in devices}
+    suggestions = {device: {feature: {condition: "" for condition in conditions} for feature in features} for device in devices}
+    transformation_summary = {device: {feature: [] for feature in features} for device in devices}
+
+    for device in devices:
+        for feature in features:
+            for condition in conditions:
+                data_values = [val[0] for val in data[device][feature][condition].values() if val]
+
+                if data_values:
+                    stat, p = stats.shapiro(data_values)
+                    normality_result = {'p_value': p, 'is_normal': p > alpha}
+                    normality_results[device][feature][condition] = normality_result
+
+                    # Update suggestions
+                    if p <= alpha:
+                        suggestion = "Consider Box-Cox transformation." if not np.all(np.array(data_values) >= 0) else "Consider log or square root transformation."
+                        suggestions[device][feature][condition] = suggestion
+
+                    # Update transformation summary for features
+                    if feature in features and not normality_result['is_normal']:
+                        transformation_summary[device][feature].append(condition)
+                else:
+                    normality_results[device][feature][condition] = {'p_value': None, 'is_normal': None}
+                    suggestions[device][feature][condition] = "Data unavailable for normality test."
+
+    print ("Normality check is done successfully!")
+    return normality_results, suggestions, transformation_summary
+
+###########################################################################
+###########################################################################
+###########################################################################
+
+def log_transform_data(data, devices, transform_features):
+    """
+    Applies a log transformation to the 'rmssd' and 'hf' features in the data for all devices and conditions.
+
+    Parameters:
+    -----------
+    data : dict
+        A nested dictionary containing the data, with keys for devices, features, and conditions.
+    devices : list
+        A list of strings representing the different devices used to collect the data.
+    transform_features : list
+        A list of strings representing the specific features to transform ('rmssd', 'hf').
+
+    Returns:
+    --------
+    None - the function updates the 'data' dictionary in place.
+    """
+    for device in devices:
+        for feature in transform_features:
+            for condition in data[device][feature]:
+                original_values = data[device][feature][condition]
+
+                # Apply log transformation to each participant's data, ensuring values are positive
+                for participant in original_values:
+                    participant_data = original_values[participant]
+                    transformed_data = [np.log(value) for value in participant_data if value > 0]
+
+                    # Update the data dictionary with the transformed data
+                    data[device][feature][condition][participant] = transformed_data
+    
+    print ("Selected features are log-transformed successfully!")
+
+###########################################################################
+###########################################################################
+###########################################################################
 
 def regression_analysis (data, criterion, conditions, devices, features, path, save_as_csv=False):
 
