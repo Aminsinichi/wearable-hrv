@@ -1852,10 +1852,10 @@ def icc_plot(icc_data, conditions, devices, features, font_size=12, cmap="coolwa
 ###########################################################################
 ###########################################################################
 
-def blandaltman_analysis (data, criterion, devices, conditions, features, path, save_as_csv=False):
-
+def blandaltman_analysis(data, criterion, devices, conditions, features, path, save_as_csv=False):
     """
     This function calculates the Bland-Altman analysis for each device compared to the criterion device, for each condition and feature.
+    It now also includes the 95% Confidence Interval for bias and Limits of Agreements.
 
     Parameters:
     -----------
@@ -1876,13 +1876,13 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
         A nested dictionary containing the Bland-Altman results for each device, feature, and condition.
     """
 
-    # Defining empty dictionaries to save Bland-Altman data analysis
+# Defining empty dictionaries to save Bland-Altman data analysis
     blandaltman_data = {device: {feature: {condition: {} for condition in conditions} for feature in features} for device in devices[:-1]}
 
     for device in devices[:-1]:
         for feature in features:
             for condition in conditions:
-                # Check for matching values between the criterion and device
+# Check for matching values between the criterion and device
                 device_data = data[device][feature][condition]
                 criterion_data = data[criterion][feature][condition]
 
@@ -1896,18 +1896,34 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
 
                 # Calculate Bland-Altman if there are matching values
                 if filtered_data_device and filtered_data_criterion:
-                    bias = np.mean(np.array(filtered_data_device) - np.array(filtered_data_criterion))
-                    sd = np.std(np.array(filtered_data_device) - np.array(filtered_data_criterion))
+                    differences = np.array(filtered_data_device) - np.array(filtered_data_criterion)
+                    bias = np.mean(differences)
+                    sd = np.std(differences, ddof=1)
                     limits_of_agreement = (bias - 1.96*sd, bias + 1.96*sd)
-                    blandaltman = {'bias': bias, 'sd': sd, 'limits_of_agreement': limits_of_agreement}
+
+                    # Calculate 95% CI for bias
+                    bias_ci = stats.t.interval(0.95, len(differences)-1, loc=bias, scale=stats.sem(differences))
+
+                    # Calculate 95% CI for LoAs
+                    loa_sd = sd / np.sqrt(len(differences))
+                    lower_loa_ci = limits_of_agreement[0] - 1.96 * loa_sd, limits_of_agreement[0] + 1.96 * loa_sd
+                    upper_loa_ci = limits_of_agreement[1] - 1.96 * loa_sd, limits_of_agreement[1] + 1.96 * loa_sd
+
+                    blandaltman = {
+                        'bias': bias, 'sd': sd, 
+                        'limits_of_agreement': limits_of_agreement,
+                        'bias_95_CI': bias_ci,
+                        'lower_loa_95_CI': lower_loa_ci,
+                        'upper_loa_95_CI': upper_loa_ci
+                    }
                     blandaltman_data[device][feature][condition] = blandaltman
                 else:
                     blandaltman_data[device][feature][condition] = None
 
-    print("Done Successfully!")
+    print(" Bland-Altman Analysis Done Successfully!")
 
     if save_as_csv:
-        # Convert nested dictionary to a list of rows
+    # Convert nested dictionary to a list of rows
         rows = []
         for device in blandaltman_data:
             for feature in blandaltman_data[device]:
@@ -1917,15 +1933,22 @@ def blandaltman_analysis (data, criterion, devices, conditions, features, path, 
                         rows.append([
                             device, feature, condition,
                             row_data['bias'], row_data['sd'],
-                            row_data['limits_of_agreement'][0], row_data['limits_of_agreement'][1]
+                            row_data['limits_of_agreement'][0], row_data['limits_of_agreement'][1],
+                            row_data['bias_95_CI'][0], row_data['bias_95_CI'][1],
+                            row_data['lower_loa_95_CI'][0], row_data['lower_loa_95_CI'][1],
+                            row_data['upper_loa_95_CI'][0], row_data['upper_loa_95_CI'][1]
                         ])
                     else:
-                        rows.append([device, feature, condition, None, None, None, None])
+                        rows.append([device, feature, condition] + [None] * 10)
 
-        # Convert list of rows to DataFrame
-        df = pd.DataFrame(rows, columns=['Device', 'Feature', 'Condition', 'Bias', 'SD', 'Lower Limit of Agreement', 'Upper Limit of Agreement'])
+        df = pd.DataFrame(rows, columns=[
+            'Device', 'Feature', 'Condition', 'Bias', 'SD', 
+            'Lower Limit of Agreement', 'Upper Limit of Agreement',
+            'Bias 95% CI Lower', 'Bias 95% CI Upper',
+            'Lower LoA 95% CI Lower', 'Lower LoA 95% CI Upper',
+            'Upper LoA 95% CI Lower', 'Upper LoA 95% CI Upper'
+        ])
         
-        # Save DataFrame to CSV
         df.to_csv(path+'blandaltman_data.csv', index=False)
         print("Blandaltman Data saved successfully!")
         
