@@ -1405,12 +1405,13 @@ def bonferroni_correction_regression (regression_data, alpha=0.05):
 ###########################################################################
 
 def regression_plot(regression_data, data, criterion, conditions, devices, features,
-                           width=15, height_per_condition=4, 
-                           regression_line_style='-', regression_line_color='black', 
-                           marker_color='gray', font_size=12, 
-                           show_grid=True, background_color=None):
+                    width=15, height_per_condition=4, 
+                    regression_line_style='-', regression_line_color='black', 
+                    marker_color='gray', font_size=12, 
+                    show_grid=True, background_color=None, 
+                    bonferroni_corrected=False):  
     """
-    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, significance values, and the number of observations.
+    This function creates scatter plots for the given regression data, data, conditions, features, and devices. It displays the scatter plots along with regression lines, correlation coefficients, significance values (with an option to indicate if they are Bonferroni corrected), and the number of observations.
 
     Parameters:
     -----------
@@ -1442,21 +1443,23 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
         Whether to display gridlines on the plot.
     background_color : str, optional
         Background color for the plot, if specified.
+    bonferroni_corrected : bool, optional, default: False
+        Indicates if the data has Bonferroni corrected p-values. If True, the function will use Bonferroni corrected p-values for significance annotations.
 
     Returns:
     --------
     None
     """
     plt.rcParams.update({'font.size': font_size})
-    
+
     def create_scatter_plots(device, feature):
         num_conditions = len(conditions)
-        fig, axs = plt.subplots(num_conditions, 1, figsize=(width, height_per_condition*num_conditions))
-        
+        fig, axs = plt.subplots(num_conditions, 1, figsize=(width, height_per_condition * num_conditions))
+
         # Make sure axs is always a list, even if there's only one condition
         if num_conditions == 1:
             axs = [axs]
-        
+
         for c, condition in enumerate(conditions):
             device_data = data[device][feature][condition]
             criterion_data = data[criterion][feature][condition]
@@ -1464,7 +1467,7 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
             filtered_data_device = []
             filtered_data_criterion = []
 
-            for pp, (pp_value_device, pp_value_criterion) in enumerate(zip(device_data.values(), criterion_data.values())):
+            for pp_value_device, pp_value_criterion in zip(device_data.values(), criterion_data.values()):
                 if pp_value_device and pp_value_criterion:
                     filtered_data_device.append(pp_value_device[0])
                     filtered_data_criterion.append(pp_value_criterion[0])
@@ -1472,7 +1475,8 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
             slope = regression_data[device][feature][condition]['slope']
             intercept = regression_data[device][feature][condition]['intercept']
             r_value = regression_data[device][feature][condition]['r_value']
-            p_value = regression_data[device][feature][condition]['p_value']
+            p_value_key = 'corrected_p_value' if bonferroni_corrected else 'p_value' # It checks if p-values are corrected or not, then take the correct corresponding value from the dic
+            p_value = regression_data[device][feature][condition][p_value_key]
 
             axs[c].scatter(filtered_data_device, filtered_data_criterion, alpha=0.8, color=marker_color)
             axs[c].set_xlabel(device if c == num_conditions - 1 else "")
@@ -1482,23 +1486,25 @@ def regression_plot(regression_data, data, criterion, conditions, devices, featu
             # Regression line
             x = np.array(filtered_data_device)
             axs[c].plot(x, intercept + slope * x, regression_line_style, color=regression_line_color, 
-                        label='y={:.2f}x+{:.2f}'.format(slope, intercept))
-            
+                        label=f'y={slope:.2f}x+{intercept:.2f}')
+
             # Correlation coefficient and significance
-            n = len(filtered_data_device)  # Number of observations
-            axs[c].annotate(f"r = {r_value:.2f}, p = {p_value:.2f}, n = {n}", (0.05, 0.9), xycoords='axes fraction')
-            
+            correction_annotation = ' (Bonferroni corrected)' if bonferroni_corrected else ''
+            n = len(filtered_data_device)
+            axs[c].annotate(f'r = {r_value:.2f}, p = {p_value:.2f}{correction_annotation}, n = {n}', 
+                            (0.05, 0.9), xycoords='axes fraction')
+
             # Optional Grid
             if show_grid:
                 axs[c].grid(True, which='both', linestyle='--', linewidth=0.5)
-            
+
             # Background color
             if background_color:
                 axs[c].set_facecolor(background_color)
-        
-        fig.suptitle(f"Regression between {device.capitalize()} and {criterion.capitalize()} for {feature.capitalize()}", 
+
+        fig.suptitle(f'Regression between {device.capitalize()} and {criterion.capitalize()} for {feature.capitalize()}', 
                      fontsize=16 + 2, y=1.02)
-        plt.tight_layout()  # to avoid overlaps
+        plt.tight_layout() # to avoid overlaps
         plt.show()
 
     def update_scatter_plots(*args):
