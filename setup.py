@@ -31,6 +31,7 @@ setup(
         "pingouin",
         "seaborn",
         "statsmodels",
-        "scipy"
+        "scipy",
+        "astropy<6.0"
     ]
 )
