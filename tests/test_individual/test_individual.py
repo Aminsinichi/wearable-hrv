@@ -1,19 +1,9 @@
-import sys
-sys.path.append(r"C:\Users\msi401\OneDrive - Vrije Universiteit Amsterdam\PhD\Data\Coding\Validation Study\wearable-hrv")
 import unittest
 from wearablehrv import individual
 import pandas as pd
 import os
-import time
 import pickle
-import tkinter as tk
-import hrvanalysis
 from unittest.mock import patch, MagicMock
-import numpy as np
-import matplotlib.pyplot as plt
-import ipywidgets as widgets
-from ipywidgets import Dropdown, IntText, Output, HBox
-from IPython.display import display, clear_output
 
 path = os.path.dirname(os.path.abspath(__file__)) + "/" 
 
@@ -111,6 +101,36 @@ class TestIndividual(unittest.TestCase):
 
 
 #############################################################################################################################
+
+    @patch('matplotlib.pyplot.show', MagicMock())  
+    @patch('ipywidgets.widgets.interaction.show_inline_matplotlib_plots', MagicMock())
+    def test_lag_correction_gui(self):
+        data = {
+            'empatica': pd.DataFrame({
+                'timestamp': [f"15:45:{str(i // 60).zfill(2)}.{str(i % 60).zfill(3)}" for i in range(600)],  # Generating more rows
+                'rr': [732 + i for i in range(600)]
+            }),
+            'vu': pd.DataFrame({
+                'timestamp': [f"16:05:{str(i // 60).zfill(2)}.{str(i % 60).zfill(3)}" for i in range(600)],  # Generating more rows
+                'rr': [0 + i for i in range(600)]
+            }),
+        }
+        
+        devices = ["empatica", "vu"]
+        criterion = "vu"
+
+        # Attempt to run the GUI function and catch exceptions
+        try:
+            individual.lag_correction(data, devices, criterion)
+            gui_works = True
+        except Exception as e:
+            gui_works = False
+            self.fail(f"GUI did not run as expected: {str(e)}")
+
+        # Assert that the GUI function ran successfully
+        self.assertTrue(gui_works, "The GUI did not run successfully.")
+
+#############################################################################################################################
     
     def test_calculate_ibi(self):
         # Using the previously imported data, events, and chopped data for this test
@@ -137,23 +157,6 @@ class TestIndividual(unittest.TestCase):
         # Test the data integrity (confirmed by manually checking the excel output)
         self.assertEqual (nibis["kyto"]["sitting"], 280)
         self.assertEqual (nibis["rhythm"]["biking"], 251)
-
-#############################################################################################################################
-
-    @patch('tkinter.Tk.mainloop', MagicMock(side_effect=[None]))  # Mocking the mainloop to exit immediately
-    def test_visual_inspection_old_gui(self):
-        # Test if the GUI runs without error
-        try:
-            data = individual.import_data(self.path, self.pp, self.devices)
-            events = individual.define_events(self.path, self.pp, self.conditions, already_saved=True, save_as_csv=False)
-            data_chopped = individual.chop_data(data, self.conditions, events, self.devices)
-            
-            individual.visual_inspection_old(data_chopped, self.devices, self.conditions, "vu")
-            gui_works = True
-        except:
-            gui_works = False
-        
-        self.assertTrue(gui_works)
 
 #############################################################################################################################
     

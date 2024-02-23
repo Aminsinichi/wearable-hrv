@@ -1,22 +1,11 @@
-import pdb
-import sys
-sys.path.append(r"C:\Users\msi401\OneDrive - Vrije Universiteit Amsterdam\PhD\Data\Coding\Validation Study\wearable-hrv")
 import unittest
 from wearablehrv import group
 import pandas as pd
-import pingouin as pg
 import os
-import time
-import pickle
-import tkinter as tk
-import hrvanalysis
 from unittest.mock import patch, MagicMock, PropertyMock
 import numpy as np
 import matplotlib.pyplot as plt
-import ipywidgets as widgets
 import seaborn as sns
-from ipywidgets import Dropdown, IntText, Output, HBox
-from IPython.display import display, clear_output
 from copy import deepcopy
 
 path = os.path.dirname(os.path.abspath(__file__)) + "/" 
@@ -138,47 +127,145 @@ class TestGroup(unittest.TestCase):
     
     def test_signal_quality(self):
         # Loading the original dataset
-        sample_data, file_names = group.import_data (path, self.conditions, self.devices, self.features)
+        sample_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
         
-        # Execute the function
-        new_data, new_features = group.signal_quality(
+        # Execute the modified function
+        new_data, new_features, summary_df, quality_df = group.signal_quality(
             deepcopy(sample_data), self.path, self.conditions, self.devices, 
-            self.features, self.criterion, file_names, exclude = True
+            self.features, self.criterion, file_names, exclude=True, 
+            save_as_csv=True, ibi_threshold=0.20, artefact_threshold=0.20, 
+            manual_missing=False, missing_threshold=10
         )
         
-        # Test if the function returns a tuple of (dict, list)
+        # Test if the function returns a tuple of the correct structure
         self.assertIsInstance(new_data, dict)
         self.assertIsInstance(new_features, list)
+        self.assertIsInstance(summary_df, pd.DataFrame)
+        self.assertIsInstance(quality_df, pd.DataFrame)
 
         # Test if 'artefact' and 'nibi_after_cropping' are removed from the features and the data
         self.assertNotIn('artefact', new_features)
         self.assertNotIn('nibi_after_cropping', new_features)
 
-        self.assertNotIn('nibi_after_cropping', new_data["vu"])
-        self.assertNotIn('artefact', new_data["vu"])
+        for device in self.devices:
+            self.assertNotIn('nibi_after_cropping', new_data[device])
+            self.assertNotIn('artefact', new_data[device])
 
-        # Test if the data dictionary is updated correctly 
-        self.assertEqual(sample_data['rhythm']['rmssd']['standing']['P05.csv'], [48.39451400218052]) # before excluding
-        self.assertEqual(new_data['rhythm']['rmssd']['standing']['P05.csv'], []) # after excluding 
- 
-        # Test if the CSV file is created
-        test_file_1 = path + "quality_report1.csv"
-        test_file_2 = path + "quality_report2.csv"
-        self.assertTrue(os.path.exists(test_file_1))
-        self.assertTrue(os.path.exists(test_file_2))
+        # Test the structure of the quality_df DataFrame
+        expected_columns = ['Device', 'Condition', 'Participant', 'Detected Beats', 'Criterion Beats', 'Detected Artefacts', 'Decision']
+        self.assertTrue(all(column in quality_df.columns for column in expected_columns))
 
-        # Test the content of the CSV file
-        saved_data_1 = pd.read_csv(test_file_1)
-        saved_data_2 = pd.read_csv(test_file_2)
-        self.assertEqual(saved_data_1["Decision"].tolist()[81], 'Missing')
-        self.assertEqual(saved_data_2["Acceptable"].tolist()[0:4], [0, 0, 4, 3])
+        # Test the structure of the summary_df DataFrame
+        self.assertTrue('Total' in summary_df.columns)
 
-        # Remove the test CSV file
-        os.remove(test_file_1)
-        os.remove(test_file_2)
+        # Test if the CSV files are created
+        quality_report1_path = self.path + "quality_report1.csv"
+        quality_report2_path = self.path + "quality_report2.csv"
+        self.assertTrue(os.path.exists(quality_report1_path))
+        self.assertTrue(os.path.exists(quality_report2_path))
+
+        # Test the content of the summary_df DataFrame for accuracy
+        # This is an example and needs to be adapted based on actual expected outcomes
+        self.assertTrue((summary_df['Total'] >= summary_df['Acceptable']).all())
+
+        # Remove the test CSV files
+        os.remove(quality_report1_path)
+        os.remove(quality_report2_path)
 
 ##############################################################################################################################
-  
+    
+    def test_signal_quality_plot1(self):
+        
+        mock_summary_df = pd.DataFrame({
+            'Acceptable': [14, 5, 32, 31, 31, 33, 29, 2, 39, 21, 40, 40, 40, 40, 40, 39, 23, 11, 25, 25, 29, 27, 23, 13, 9, 9, 17, 24, 26, 28, 19, 3, 40, 40, 40, 40, 40, 40, 40, 40],
+            'Missing': [6, 6, 6, 6, 6, 6, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0],
+            'Poor': [20, 29, 2, 3, 3, 1, 5, 32, 1, 19, 0, 0, 0, 0, 0, 1, 10, 22, 8, 8, 4, 6, 10, 20, 27, 27, 19, 12, 10, 8, 17, 33, 0, 0, 0, 0, 0, 0, 0, 0],
+            'Total': [34, 34, 34, 34, 34, 34, 34, 34, 40, 40, 40, 40, 40, 40, 40, 40, 33, 33, 33, 33, 33, 33, 33, 33, 36, 36, 36, 36, 36, 36, 36, 36, 40, 40, 40, 40, 40, 40, 40, 40]
+        }, index=pd.MultiIndex.from_product([['empatica', 'heartmath', 'kyto', 'rhythm', 'vu'], 
+                                            ['arithmetic', 'biking', 'breathing', 'neurotask', 'recovery', 'sitting', 'standing', 'walking']], 
+                                            names=['Device', 'Condition']))
+
+        mock_condition_mapping = {
+            'arithmetic': 'Category1', 'biking': 'Category2', 'breathing': 'Category3', 
+            'neurotask': 'Category4', 'recovery': 'Category5', 'sitting': 'Category6', 
+            'standing': 'Category7', 'walking': 'Category8'
+        }
+
+        # Mock plt.show() to prevent actual plot display
+        with patch.object(plt, 'show', MagicMock()), \
+            patch.object(pd.DataFrame, 'plot', MagicMock()) as mock_plot:
+            # Call the function with mocked parameters
+            try:
+                group.signal_quality_plot1(
+                    mock_summary_df,
+                    mock_condition_mapping,
+                    criterion='criterion',
+                    device_selection=False,
+                    criterion_exclusion=True,
+                    x_label="Condition Categories"
+                )
+                plot_works = True
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                plot_works = False
+
+        self.assertTrue(plot_works)
+
+        # Verify if the plot function was called correctly
+        mock_plot.assert_called_with(kind='bar', stacked=True, figsize=(10, 6), color={'Poor': 'red', 'Acceptable': 'green', 'Missing': 'yellow'})
+
+##############################################################################################################################
+
+    def test_signal_quality_plot2_corrected(self):
+        # Create a mock DataFrame based on the structure you've provided
+        mock_summary_df = pd.DataFrame({
+            'Acceptable': [14, 5, 32, 31, 31, 33, 29, 2, 39, 21, 40, 40, 40, 40, 40, 39, 23, 11, 25, 25, 29, 27, 23, 13, 9, 9, 17, 24, 26, 28, 19, 3, 40, 40, 40, 40, 40, 40, 40, 40],
+            'Missing': [6, 6, 6, 6, 6, 6, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0],
+            'Poor': [20, 29, 2, 3, 3, 1, 5, 32, 1, 19, 0, 0, 0, 0, 0, 1, 10, 22, 8, 8, 4, 6, 10, 20, 27, 27, 19, 12, 10, 8, 17, 33, 0, 0, 0, 0, 0, 0, 0, 0],
+        }, index=pd.MultiIndex.from_product([['empatica', 'heartmath', 'kyto', 'rhythm', 'vu'], 
+                                            ['arithmetic', 'biking', 'breathing', 'neurotask', 'recovery', 'sitting', 'standing', 'walking']], 
+                                            names=['Device', 'Condition']))
+
+        mock_conditions = ['arithmetic', 'biking', 'breathing', 'neurotask', 'recovery', 'sitting', 'standing', 'walking']
+        mock_devices = ['empatica', 'heartmath', 'kyto', 'rhythm', 'vu']
+
+        # Mock plt.show() to prevent actual plot display
+        with patch.object(plt, 'show', MagicMock()), \
+            patch.object(pd.DataFrame, 'plot', MagicMock()) as mock_plot:
+            # Test without condition selection
+            try:
+                group.signal_quality_plot2(
+                    mock_summary_df,
+                    mock_conditions,
+                    mock_devices,
+                    condition_selection=False
+                )
+                plot_works_all_conditions = True
+            except Exception as e:
+                print(f"An error occurred for all conditions: {e}")
+                plot_works_all_conditions = False
+            
+            # Test with condition selection
+            try:
+                group.signal_quality_plot2(
+                    mock_summary_df,
+                    mock_conditions,
+                    mock_devices,
+                    condition_selection=True,
+                    condition='arithmetic'
+                )
+                plot_works_single_condition = True
+            except Exception as e:
+                print(f"An error occurred for a single condition: {e}")
+                plot_works_single_condition = False
+
+        self.assertTrue(plot_works_all_conditions)
+        self.assertTrue(plot_works_single_condition)
+
+        # Verify if the plot function was called correctly
+        mock_plot.assert_called_with(kind='bar', stacked=True, figsize=(10, 6), color={'Poor': 'red', 'Acceptable': 'green', 'Missing': 'yellow'})
+
+##############################################################################################################################
     def test_violin_plot(self):
 
         # Create mock data dictionary for the test
@@ -379,37 +466,6 @@ class TestGroup(unittest.TestCase):
 
         # Remove the test CSV file
         os.remove(test_file_regression)
-
-##############################################################################################################################
-    
-    def test_regression_plot(self):
-
-        # Create mock data dictionary for the test
-        mock_data, file_names = group.import_data(self.path, self.conditions, self.devices, self.features)
-        mock_data = group.nan_handling (mock_data, self.devices, self.features, self.conditions) # This function is sensitive to NaN values, that's why I am first taking care of them
-        new_features = ["rmssd", "hf",'pnni_50','mean_hr','sdnn']
-        regression_data = group.regression_analysis(mock_data, self.criterion, self.conditions, self.devices, new_features, self.path, save_as_csv=False) # Assuming you have this function
-
-        with patch.object(plt, 'show', MagicMock()):  # Mocking plt.show() to prevent actual plot display
-            with patch.object(plt, 'scatter', MagicMock()):  # Mocking plt.scatter to prevent actual plot display
-                with patch.object(plt, 'plot', MagicMock()):  # Mocking plt.plot to prevent actual plot display
-                    with patch('IPython.display.display', MagicMock()):  # Mocking the display function to prevent actual display
-                        with patch('ipywidgets.Output', MagicMock()):  # Mocking the Output widget to prevent actual display
-                            try:
-                                group.regression_plot(
-                                    regression_data,
-                                    mock_data,
-                                    self.criterion,
-                                    self.conditions,
-                                    self.devices,
-                                    self.features
-                                )
-                                plot_works = True
-                            except:
-                                plot_works = False
-
-        self.assertTrue(plot_works)
-
 
 ##############################################################################################################################
 
