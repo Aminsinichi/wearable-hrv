@@ -29,6 +29,10 @@ For an in-depth explanation of the package and sample data, please refer to:
 
 [![Documentation](https://img.shields.io/badge/Read-Documentation-blue)](https://github.com/Aminsinichi/wearable-hrv/blob/master/notebooks/documentation.ipynb)
 
+For the complete documentation of the API and modules, visit:
+
+[![Documentation Status](https://readthedocs.org/projects/wearable-hrv/badge/?version=latest)](https://wearable-hrv.readthedocs.io/en/latest/?badge=latest)
+
 # Questions
 
 For any questions regarding the package, please contact:
