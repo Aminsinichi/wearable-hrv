@@ -10,11 +10,15 @@ Welcome to wearablehrv's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: wearablehrv
+.. automodule:: wearablehrv.individual
    :members:
    :undoc-members:
    :show-inheritance:
 
+.. automodule:: wearablehrv.group
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Indices and tables
 ==================
