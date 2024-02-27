@@ -1,0 +1,14 @@
+sphinx>=4.0
+pandas
+numpy
+plotly
+matplotlib
+ipywidgets
+IPython
+hrv-analysis
+avro-python3
+pingouin
+seaborn
+statsmodels
+scipy
+astropy<6.0
