@@ -1,9 +1,4 @@
-#########################INDIVIDUAL######################################
-#########################INDIVIDUAL######################################
-#########################INDIVIDUAL######################################
-############################## Wearablehrv ##############################
-
-############################Importing Modules############################
+# INDIVIDUAL pipeline for Wearablehrv package
 
 import datetime
 import os
@@ -33,26 +28,29 @@ def labfront_conversion(path, pp, file_name, device_name, date):
     """
     Converts Labfront data into a standardized CSV format, filtering by a specific date.
 
-    This function processes CSV data from Labfront. It first reads the data, then focuses on
-    the 'isoDate' and 'bbi' columns. The data is then filtered based on the provided date, and
-    relevant columns are renamed for standardization. The processed data is then saved into a new CSV file.
+    This function reads CSV data from Labfront, focusing on the 'isoDate' and 'bbi' columns. It filters the data based on the provided date and renames relevant columns for standardization. The processed data is saved into a new CSV file named with the participant ID and device name.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     path : str
         The directory path pointing to the location of the Labfront data.
     pp : str
         The unique ID of the participant for which the data is being processed.
     file_name : str
-        The name of the Labfront file (with its extension) to be processed.
+        The name of the Labfront file (including its extension) to be processed.
     device_name : str
-        The name of the device used to collect the data. This will be used in the resulting CSV's filename.
+        The name of the device used to collect the data, used in the resulting CSV's filename.
     date : str
-        The specific date for which data should be extracted, provided in a format that can be parsed by pandas' to_datetime function (e.g., 'YYYY-MM-DD').
+        The specific date for which data should be extracted, in a format that can be parsed by pandas' to_datetime function (e.g., 'YYYY-MM-DD').
 
-    Returns:
-    --------
-    None. The function saves the output directly to a CSV file in the specified path.
+    Returns
+    -------
+    None
+        The function saves the output directly to a CSV file in the specified path. The final CSV contains a timestamp column and a renamed 'bbi' column to 'rr', indicating respiratory rate.
+
+    Notes
+    -----
+    The function prints a message upon successful completion of the conversion and saving process.
     """
 
     labfront = pd.read_csv(path + file_name, skiprows=5)
@@ -74,31 +72,33 @@ def labfront_conversion(path, pp, file_name, device_name, date):
 
 def empatica_conversion(path, pp):
     """
-    Converts Empatica data from Avro format into a CSV file, focusing on the 'systolicPeaks' field.
+    Converts Empatica data from Avro format to a CSV file, focusing on the 'systolicPeaks' field.
 
-    This function processes data files associated with a participant's Empatica device data stored
-    in Avro format. It specifically reads the 'systolicPeaks' field from these Avro files.
-    The extracted peak times (in nanoseconds) are converted to milliseconds, and the interbeat
-    intervals (IBIs) are then calculated. The resulting data is saved to a CSV file.
+    This function processes Empatica device data files stored in Avro format for a given participant.
+    It extracts the 'systolicPeaks' field from these files, which includes peak times in nanoseconds.
+    These times are converted to milliseconds, and the interbeat intervals (IBIs) are calculated.
+    The resulting data, comprising timestamps (in milliseconds) and IBIs, is saved to a CSV file.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     path : str
         The directory path pointing to the location of the participant's Empatica data.
     pp : str
         The unique ID of the participant whose Empatica data is to be converted.
 
-    Note:
+    Returns
+    -------
+    None
+        The function saves the output directly to a CSV file in the specified path. The CSV file is named
+        using the participant's ID with '_empatica.csv' as the suffix and includes columns for 'timestamp'
+        (milliseconds) and 'rr' (calculated IBIs).
+
+    Notes
     -----
-    The expected directory structure is:
-    <path>/<participant_id>_empatica/raw_data/v6
-    with Avro files containing the 'systolicPeaks' field.
-
-    Returns:
-    --------
-    None. The function saves the output directly to a CSV file in the specified path.
+    - The expected directory structure for the Avro files is `<path>/<participant_id>_empatica/raw_data/v6`.
+    - The function assumes Avro files contain the 'systolicPeaks' field with peak times in nanoseconds.
+    - The final CSV file excludes the last timestamp since there's no corresponding IBI.
     """
-
     avrofiles_path = path + "/" + pp + "_empatica" + "/raw_data" + "/v6"
 
     # Function to read systolicPeaks data from a single Avro file
@@ -144,27 +144,34 @@ def empatica_conversion(path, pp):
 
 def define_events(path, pp, conditions, already_saved=True, save_as_csv=False):
     """
-    This function defines and saves events that occurred during a task for a specific participant.
+    Defines and optionally saves events that occurred during a task for a specific participant.
 
-    Parameters:
-    -----------
+    This function either reads previously saved events from a CSV file or allows the user to define events interactively through a GUI, depending on the 'already_saved' parameter. The events are associated with different conditions of a task and are stored in a pandas DataFrame. If 'save_as_csv' is True, the events DataFrame is saved as a CSV file in the specified path.
+
+    Parameters
+    ----------
     path : str
-        The path to the directory where the events file should be saved.
+        The path to the directory where the events file should be saved or has been saved.
     pp : str
         The ID of the participant for whom the events are being defined.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
+    conditions : list of str
+        A list of strings representing the different conditions in the task.
     already_saved : bool, optional
-        A boolean variable that indicates if the events file has already been saved previously. If True, the function reads the file from the specified path. If False, the function opens a GUI to allow the user to define the events interactively. Default is True.
+        Indicates if the events file has already been saved. If True, reads the events from the specified path. If False, opens a GUI for interactive event definition. Default is True.
     save_as_csv : bool, optional
-        A boolean variable that indicates if the events DataFrame should be saved as a CSV file. Default is False.
+        Indicates if the events DataFrame should be saved as a CSV file. Default is False.
 
-    Returns:
-    --------
-    events : pandas DataFrame
-        A DataFrame that contains the events data for the participant.
+    Returns
+    -------
+    events : pandas.DataFrame
+        A DataFrame containing the events data for the participant, with columns for timestamps, conditions, and whether the event marks the start or end of a condition.
+
+    Notes
+    -----
+    - The CSV file structure, when saved, includes columns for timestamps, conditions, and event types (start/end of a condition).
+    - If 'already_saved' is False, the function launches a GUI for the user to input events data interactively. The GUI requires the user to input start and end times for each condition.
+    - The 'conditions' parameter should match the conditions expected to be found or entered for the events.
     """
-
     # Define the path to the events file
     path_events = path + pp + "_events.csv"  # creathing the path
 
@@ -301,26 +308,39 @@ def import_data(path, pp, devices):
     """
     Imports participant-specific data from different devices and consolidates them into a dictionary.
 
-    This function processes data files associated with different devices. For the "vu" device, it
-    specifically reads from a text file exported from VU-DAMS. Other devices' data are expected in CSV format,
-    often recorded using HRV Logger. It's noteworthy that, for HRV Logger, if there's an unnecessary third
-    column in the data, it will be dropped.
+    This function processes data files for a given participant from multiple devices. For data from the "vu" device,
+    it reads from a text file (exported from VU-DAMS), selecting and renaming specific columns. For other devices,
+    presumably recorded using HRV Logger, it expects CSV files and drops an unnecessary third column if present.
+    Timestamps are standardized across devices in the final dataset.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     path : str
         The directory path where the data files corresponding to the participant are located.
     pp : str
         The unique ID of the participant whose data is to be imported.
     devices : list of str
-        Names of devices from which the data has been collected. Data from each device is expected to be
-        in a file named in the format: <participant_id>_<device_name>.<appropriate_extension>.
+        Names of devices from which the data has been collected. Each device's data should be in a file named
+        <participant_id>_<device_name>.<appropriate_extension>, where the extension is `.txt` for the "vu" device
+        and `.csv` for other devices.
 
-    Returns:
-    --------
+    Returns
+    -------
     data : dict
-        A dictionary wherein each key is a device name and the associated value is a DataFrame containing
-        the data from that device for the specified participant.
+        A dictionary where each key is a device name, and the associated value is a DataFrame containing the data
+        from that device for the specified participant. The DataFrames have columns for timestamps (formatted as
+        "HH:MM:SS.mmm") and rr intervals, with any irrelevant columns removed.
+
+    Notes
+    -----
+    - The function handles the "vu" device data differently by reading from a text file and specifically focusing
+    on "R-peak time" and "ibi" columns, which are then renamed to "timestamp" and "rr" respectively.
+    - For other devices, it reads CSV files and drops the third column if it exists, standardizing the column names
+    by stripping leading and trailing whitespace.
+    - Timestamps for all devices are converted to pandas datetime objects and then reformatted to strings that
+    represent the time in "HH:MM:SS.mmm".
+    - It's assumed that timestamps from the "vu" device are in a different initial format than those from other
+    devices, necessitating specific preprocessing steps for each.
     """
 
     data = {
@@ -391,18 +411,46 @@ def import_data(path, pp, devices):
 
 def lag_correction(data, devices, criterion):
     """
-    Adjusts and visualizes the lag in timestamped data for different devices.
+    Adjusts and visualizes the lag in timestamped data for different devices using an interactive GUI.
 
-    This function creates an interactive GUI using IPython widgets. It allows users to select a device, define a time range, and adjust the lag (in milliseconds) for the data. The adjusted data is visualized in a plot.
+    This function employs IPython widgets to create a user interface that facilitates the adjustment of time lags
+    between data recorded by different devices. Users can select a device, define a start and end time for analysis,
+    and adjust the lag (in milliseconds) using a slider. The adjusted and original data are visualized in a plot for
+    comparison. Changes can be saved to adjust the timestamps in the original dataset.
 
-    Parameters:
-    data (dict): A dictionary containing timestamped data for multiple devices.
-    devices (list): A list of strings representing the available devices.
-    criterion (str): The criterion used for selecting the relevant data from 'data'.
+    Parameters
+    ----------
+    data : dict
+        A dictionary where keys are device names and values are DataFrames containing the data for each device.
+        Each DataFrame must have a 'timestamp' column and at least one other column for data values (e.g., 'rr').
+    devices : list of str
+        A list of strings representing the devices available for lag correction.
+    criterion : str
+        The criterion used for selecting the relevant data from 'data'. This is typically the name of a device or a
+        specific dataset within `data` used as a reference for alignment.
 
-    Returns:
+    Notes
+    -----
+    - The GUI allows for dynamic selection of devices from the provided list and adjustment of the time range
+    and lag with immediate visualization feedback.
+    - The 'Start Time' and 'End Time' inputs determine the subset of data to be visualized and adjusted.
+    - The lag slider supports a range of -20,000ms to +20,000ms and updates the plot in real-time as adjustments are made.
+    - A 'Save Lag' button applies the lag adjustment to the data for the selected device and resets the slider, allowing
+    for subsequent adjustments if necessary.
+    - This function is designed to be used in a Jupyter Notebook environment where IPython widgets are supported.
+    - Adjustments made to the data using this function are temporary and affect only the session's data unless explicitly
+    saved or processed further.
+
+    Examples
     --------
-    None
+    To use `lag_correction` in a Jupyter Notebook:
+
+    ```python
+    data = {'device1': device1_df, 'device2': device2_df}
+    devices = ['device1', 'device2']
+    criterion = 'device1'  # Use device1 as the reference for alignment
+    lag_correction(data, devices, criterion)
+    ```
     """
     # Create the device dropdown widget
     device_dropdown = widgets.Dropdown(
@@ -536,23 +584,42 @@ def lag_correction(data, devices, criterion):
 
 def chop_data(data, conditions, events, devices):
     """
-    This function chops the data from different devices into separate segments based on the events.
+    Chops the data from different devices into separate segments based on specified events.
 
-    Parameters:
-    -----------
+    This function segments the raw data for each device into smaller parts corresponding to different conditions
+    of a task, as defined by start and end times in an events DataFrame. The segmented data is organized in a new
+    dictionary, preserving the device and condition structure, and includes both timestamps and corresponding data points.
+
+    Parameters
+    ----------
     data : dict
-        A dictionary containing the raw data for all devices and conditions.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
-    events : pandas DataFrame
-        A DataFrame containing the event data for the participant.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
+        A dictionary containing the raw data for all devices. Each key is a device name, and the value is a DataFrame
+        with a 'timestamp' column and one or more data columns (e.g., 'rr' for respiratory rate).
+    conditions : list of str
+        A list of strings representing the different conditions in the task. Each condition is expected to be present
+        in the 'conditions' column of the events DataFrame.
+    events : pandas.DataFrame
+        A DataFrame containing the event data for the participant, with at least 'timestamp', 'conditions', and
+        'datapoint' columns, where 'datapoint' indicates the start or end of a condition.
+    devices : list of str
+        A list of strings representing the different devices used to collect the data. Each device name should correspond
+        to a key in the `data` dictionary.
 
-    Returns:
-    --------
+    Returns
+    -------
     data_chopped : dict
-        A dictionary containing the chopped data for all devices and conditions.
+        A dictionary containing the chopped data for all devices and conditions. Each entry under a device key is a
+        nested dictionary where each key is a condition name and the value is a DataFrame of the data for that condition,
+        including timestamps within the start and end times defined in the events DataFrame.
+
+    Notes
+    -----
+    - The function expects the timestamps in the events DataFrame and the data DataFrames to be compatible and formatted
+    similarly to allow for accurate comparison and filtering.
+    - Start and end times for each condition are extracted from the events DataFrame and used to filter the data
+    for each device into segments corresponding to those conditions.
+    - The output dictionary structure allows for easy access to data by device and condition, facilitating further analysis.
+
     """
 
     # it contains the begening and end of each condition
@@ -600,23 +667,38 @@ def chop_data(data, conditions, events, devices):
 
 def calculate_ibi(data_chopped, devices, conditions):
     """
-    This function calculates the number of Inter-Beat Intervals (IBI) for each condition and device.
+    Calculates the number of Inter-Beat Intervals (IBI) for each condition and device from segmented data.
 
-    Parameters:
-    -----------
+    This function iterates over the provided segmented data for each device and condition, calculating the number
+    of IBIs. The IBIs are expected to be represented as the number of rows in each condition's data segment for a device.
+
+    Parameters
+    ----------
     data_chopped : dict
-        A dictionary containing the chopped RR interval data for all devices and conditions.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
+        A dictionary containing the chopped data for all devices and conditions. Each entry under a device key should be a
+        nested dictionary where each key is a condition name, and the value is a DataFrame of the segmented data,
+        including timestamps and corresponding data points (e.g., 'rr' for respiratory rate).
+    conditions : list of str
+        A list of strings representing the different conditions in the task. These should match the keys in the
+        nested dictionaries under each device key in `data_chopped`.
+    devices : list of str
+        A list of strings representing the different devices used to collect the data. Each device name should correspond
+        to a key in the `data_chopped` dictionary.
 
-    Returns:
-    --------
+    Returns
+    -------
     nibis : dict
-        A dictionary containing the number of IBIs for each condition and device.
-    """
+        A dictionary where each entry is keyed by device name, and the value is another dictionary with conditions as keys.
+        The values in this nested dictionary are integers representing the count of data points (or IBIs) for each condition
+        within the data segment of the specified device.
 
+    Notes
+    -----
+    - This function assumes that the input data in `data_chopped` is properly segmented according to the specified conditions
+    and that each segment's data points represent IBIs.
+    - The output dictionary can be used to compare the number of IBIs across different conditions and devices, providing a
+    basis for further statistical analysis or comparison.
+    """
     nibis = {device: {condition: {} for condition in conditions} for device in devices}
 
     for device in devices:
@@ -636,22 +718,43 @@ def calculate_ibi(data_chopped, devices, conditions):
 
 def visual_inspection(data_chopped, devices, conditions, criterion):
     """
-    This function allows for visual inspection and manual modification of the RR interval data.
+    Allows for visual inspection and manual modification of the RR interval data through an interactive GUI.
 
-    Parameters:
-    -----------
+    This function provides a graphical user interface for visually inspecting and manually adjusting RR interval data.
+    Users can select a device and condition, visualize the RR intervals alongside those of a criterion device, and apply
+    manual corrections for lag and data trimming. Adjustments include lag correction in seconds or milliseconds and
+    trimming data by specifying start and end points. The interface supports both individual and full lag corrections
+    across all conditions, with modifications directly applied to the input `data_chopped` dictionary.
+
+    Parameters
+    ----------
     data_chopped : dict
-        A dictionary containing the chopped RR interval data for all devices and conditions.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
+        A dictionary containing the chopped RR interval data for all devices and conditions. Each device's data
+        is stored under its name as a key, with nested dictionaries for each condition containing DataFrames of
+        timestamps and RR intervals.
+    devices : list of str
+        A list of strings representing the different devices used to collect the data. Each string must correspond
+        to a key in `data_chopped`.
+    conditions : list of str
+        A list of strings representing the different conditions in the task. Each condition must be a key within
+        the nested dictionaries under each device key in `data_chopped`.
     criterion : str
-        A string that represents the device used as the criterion device.
+        A string representing the device used as the criterion for comparison. This should be one of the devices
+        listed in `devices` and used to reference the expected correct timing of events for comparison and correction.
 
-    Returns:
-    --------
-    None
+    Notes
+    -----
+    - The GUI includes dropdown menus for selecting devices and conditions, sliders for adjusting lag and specifying
+    start and end points for trimming, and buttons for applying changes.
+    - Lag adjustments can be made in seconds or milliseconds, and users can choose between individual and full lag
+    correction modes. Individual mode applies adjustments only to the selected condition, whereas full mode applies
+    the same adjustment across all conditions.
+    - Data trimming allows users to specify start and end points within the RR interval data to exclude irrelevant or
+    erroneous data segments.
+    - Changes made through the GUI are applied directly to the `data_chopped` dictionary and can be saved permanently by
+    the user if desired.
+    - This function is designed to facilitate data preprocessing by enabling detailed examination and correction of RR
+    interval data prior to analysis.
     """
 
     # Define the function that creates the plot
@@ -1033,23 +1136,27 @@ def save_backup(pp, path, data_chopped):
 
 def import_backup(pp, path):
     """
-    This function loads the processed and chopped data from a pickle file.
+    Saves the processed and chopped data into a pickle file for backup or further processing.
 
-    Parameters:
-    -----------
+    This function serializes the given dictionary containing processed and segmented data into a pickle file,
+    allowing for storage and retrieval. The file is saved with a name indicating the preprocessing
+    applied and is intended for backup or subsequent analysis steps.
+
+    Parameters
+    ----------
     pp : str
-        The name of the preprocessing applied to the data.
+        The identifier or name of the preprocessing applied to the data, used to name the output file.
     path : str
-        The path where the pickle file is located.
-
-    Returns:
-    --------
+        The directory path where the pickle file will be saved.
     data_chopped : dict
-        A dictionary containing the chopped data that has been processed.
+        A dictionary containing the chopped data that has undergone preprocessing. This data is
+        serialized and saved to a file.
 
-    The function will print a message indicating if the data was loaded successfully.
+    Notes
+    -----
+    - The output filename is constructed using the preprocessing identifier and a '_data_chopped.pkl' suffix.
+    - A message is printed upon successful saving of the data, indicating the completion of the operation.
     """
-
     # Read the file
     filename = os.path.join(path, f"{pp}_data_chopped.pkl")
     with open(filename, "rb") as file:
@@ -1074,30 +1181,48 @@ def pre_processing(
     high_rri=2000,
 ):
     """
-    This function preprocesses the RR intervals data using the HRV analysis package, by removing outliers,
-    interpolating missing values, and removing ectopic beats, and stores the preprocessed data in a dictionary.
+    Preprocesses the RR intervals data using specified methodologies for outlier removal, interpolation of missing values,
+    and ectopic beat removal, and stores the preprocessed data in a new dictionary.
 
-    Parameters:
-    -----------
+    This function processes the RR interval data from various devices and conditions. It applies outlier detection
+    based on specified lower and upper threshold values, interpolates missing RR interval values, removes ectopic beats
+    using a specified method, and interpolates again to ensure a continuous dataset. The preprocessing steps are
+    executed using functions from the HRV Analysis package (https://aura-healthcare.github.io/hrv-analysis/).
+
+    Parameters
+    ----------
     data_chopped : dict
-        A dictionary containing the chopped RR interval data for all devices and conditions.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
+        A dictionary containing the chopped RR interval data for all devices and conditions. Each device's data is
+        stored under its name as a key, with nested dictionaries for each condition containing lists or DataFrames of
+        RR intervals.
+    devices : list of str
+        A list of strings representing the different devices used to collect the data.
+    conditions : list of str
+        A list of strings representing the different conditions in the task.
     method : str, optional
-        A string that represents the method to use for removing ectopic beats. Default is "karlsson".
+        The method used for removing ectopic beats. Defaults to "karlsson".
     custom_removing_rule : float, optional
-        A float that represents the custom removing rule for the ectopic beats removal method. Default is 0.25.
+        A custom rule parameter for the ectopic beat removal method, specified as a float. Defaults to 0.25.
     low_rri : int, optional
-        An integer that represents the lower threshold for outlier detection. Default is 300.
+        The lower threshold for RR interval outlier detection, in milliseconds. Defaults to 300.
     high_rri : int, optional
-        An integer that represents the higher threshold for outlier detection. Default is 2000.
+        The upper threshold for RR interval outlier detection, in milliseconds. Defaults to 2000.
 
-    Returns:
-    --------
+    Returns
+    -------
     dict
-        A dictionary containing the preprocessed RR intervals data for each condition for each device.
+        A dictionary containing the preprocessed RR intervals data for each device and condition, structured similarly
+        to `data_chopped`.
+
+    Notes
+    -----
+    - The function leverages external functions from an HRV analysis package for data cleaning and preprocessing.
+    These functions include `remove_outliers`, `interpolate_nan_values`, and `remove_ectopic_beats`.
+    - If preprocessing fails for a specific condition on a device, an error message is printed, and the function
+    continues processing the remaining data.
+    - The original `data_chopped` dictionary is modified to contain only the 'rr' values, discarding the timestamps.
+    This simplification is made prior to applying the preprocessing steps.
+    - The function returns the preprocessed data along with the modified `data_chopped` for reference or further use.
     """
 
     # Turning the dataset into RR intervals only: now that we have visualized the data and learned about its structure, we can simplify the next steps by discarding the x-axis (time axis).
@@ -1161,24 +1286,40 @@ def pre_processing(
 
 def calculate_artefact(data_chopped, data_pp, devices, conditions):
     """
-    This function calculates the number of artifacts for each device and condition.
+    Calculates the number of artifacts in RR interval data for each device and condition by comparing original (chopped)
+    data with preprocessed data.
 
-    Parameters:
-    -----------
+    Artifacts are identified as discrepancies between the original and preprocessed RR intervals for each device and
+    condition. This function counts the instances where RR intervals from the original data do not match those in the
+    preprocessed data, assuming that preprocessing corrects or removes artifacts, thus indicating their presence in the
+    original dataset.
+
+    Parameters
+    ----------
     data_chopped : dict
-        A dictionary containing the chopped RR interval data for all devices and conditions.
+        A dictionary containing the chopped RR interval data for all devices and conditions. Each entry under a device
+        key is a nested dictionary where each key is a condition name, and the value is a list or DataFrame of RR intervals.
     data_pp : dict
-        A dictionary containing the pre-processed RR interval data for all devices and conditions.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
+        A dictionary containing the preprocessed RR interval data for all devices and conditions, structured similarly
+        to `data_chopped`. Preprocessing may include outlier removal, interpolation, and ectopic beat correction.
+    devices : list of str
+        A list of strings representing the different devices used to collect the data.
+    conditions : list of str
+        A list of strings representing the different conditions in the task.
 
-    Returns:
-    --------
+    Returns
+    -------
     artefact : dict
-        A dictionary containing the number of artifacts for each device and condition.
+        A dictionary where each entry is keyed by device name, with nested dictionaries for each condition. The value for
+        each condition is an integer representing the count of detected artifacts in the RR interval data.
 
+    Notes
+    -----
+    - The comparison is made element-wise between the lists of RR intervals in `data_chopped` and `data_pp` for each
+    device and condition. Differences are counted as artifacts.
+    - This method assumes that all discrepancies between the original and preprocessed data are due to artifacts that
+    were corrected or removed during preprocessing.
+    - The function prints a message upon successful calculation of artifacts, summarizing the operation's outcome.
     """
 
     artefact = {
@@ -1212,34 +1353,38 @@ def ibi_comparison_plot(
     data_chopped, data_pp, devices, conditions, criterion, width=20, height=10
 ):
     """
-    This function plots a comparison of the original and pre-processed RR intervals for each condition and device,
-    as well as the reference device, which is used as a criterion. The plots show the difference between the two
-    types of RR intervals. The function takes in the chopped and pre-processed RR interval data for all devices
-    and conditions, the devices, the conditions, the criterion, as well as optional parameters to customize the
-    plot such as the start and end index, width, and height. It then plots the data using matplotlib and returns
-    nothing.
+    Plots a comparison of the original (chopped) and pre-processed RR intervals for selected devices and conditions against
+    the criterion device's data. This visual representation helps in assessing the effect of preprocessing steps on the RR
+    interval data. Each selected device's RR intervals are plotted alongside the criterion device's data for comparison.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data_chopped : dict
-        A dictionary containing the chopped RR interval data for all devices and conditions.
+        A dictionary containing the chopped RR interval data for all devices and conditions, with each device's data
+        being a nested dictionary where each key is a condition name, and the value is a list of RR intervals.
     data_pp : dict
-        A dictionary containing the pre-processed RR interval data for all devices and conditions.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
+        A dictionary containing the preprocessed RR interval data for all devices and conditions, structured similarly
+        to `data_chopped`. Preprocessing may include outlier removal, interpolation, and ectopic beat correction.
+    devices : list of str
+        A list of strings representing the different devices used to collect the data.
+    conditions : list of str
+        A list of strings representing the different conditions in the task.
     criterion : str
-        A string that represents the device used as the criterion device.
+        The device name used as the reference or criterion for comparison. This device's data is plotted as the
+        benchmark for assessing preprocessing effects.
     width : int, optional
-        An integer that represents the width of the plot. Default is 25.
+        The width of the plot in inches. Default is 20.
     height : int, optional
-        An integer that represents the height of the plot. Default is 30.
+        The height of the plot in inches. Default is 10.
 
-    Returns:
-    --------
-    None
-
+    Notes
+    -----
+    - The function utilizes matplotlib for plotting and IPython widgets for interactive selection of devices and
+    conditions to be visualized.
+    - Two plots are generated for each selected condition: one for the selected device and one for the criterion device,
+    each comparing original against preprocessed RR intervals.
+    - This function is designed to be used in a Jupyter notebook environment where the interactive features provided
+    by IPython widgets can be fully utilized.
     """
 
     # Define the function that updates the plot
@@ -1322,24 +1467,40 @@ def ibi_comparison_plot(
 
 def data_analysis(data_pp, devices, conditions):
     """
-    This function calculates all the time domain and frequency domain features by the hrvanalysis package for the pre-processed RR intervals
-    data.
+    Calculates time domain and frequency domain HRV (Heart Rate Variability) features for pre-processed RR interval data
+    using the hrvanalysis package.
 
-    Parameters:
-    -----------
+    This function iterates over pre-processed RR interval data for each device and condition, applying HRV analysis to
+    extract meaningful statistical measures. These measures include time domain features, which describe the variability
+    in time between successive heartbeats, and frequency domain features, which provide insights into the oscillatory
+    components of heart rate signals under different physiological states.
+
+    Parameters
+    ----------
     data_pp : dict
-        A dictionary containing the pre-processed RR interval data for all devices and conditions.
-    devices : list
-        A list of strings that represent the different devices used to collect the data.
-    conditions : list
-        A list of strings that represent the different conditions in the task.
+        A dictionary containing the pre-processed RR interval data for all devices and conditions. Each entry should
+        be a list of RR intervals in milliseconds.
+    devices : list of str
+        A list of strings representing the different devices used to collect the RR interval data.
+    conditions : list of str
+        A list of strings representing the different conditions under which the RR interval data was collected.
 
-    Returns:
-    --------
+    Returns
+    -------
     time_domain_features : dict
-        A dictionary containing the time domain features for each device and condition.
+        A dictionary where each key is a device name, each value is a nested dictionary with conditions as keys, and
+        the corresponding values are dictionaries of time domain HRV features calculated for that device and condition.
     frequency_domain_features : dict
-        A dictionary containing the frequency domain features for each device and condition.
+        A dictionary structured similarly to `time_domain_features`, but containing frequency domain HRV features instead.
+
+    Notes
+    -----
+    - The HRV analysis is performed using the `get_time_domain_features` and `get_frequency_domain_features` functions
+    from the hrvanalysis package.
+    - In case analysis cannot be performed for a given condition on a device (e.g., due to insufficient or unsuitable
+    data), an error message will be printed, and the function will proceed with the remaining data.
+    - This function is designed for use with RR interval data that has already undergone preprocessing steps such as
+    outlier removal, interpolation, and ectopic beat correction.
     """
 
     # calculating all the time domain and frequency domain features by the hrvanalysis package
@@ -1389,32 +1550,35 @@ def result_comparison_plot(
     height=25,
 ):
     """
-    This function creates comparison bar charts for time and frequency domain measures of HRV for each device, both for the original data and after pre-processing.
+    Creates comparison bar charts for time and frequency domain measures of HRV for each device against the criterion device, both for original and pre-processed data.
 
-    Parameters:
-    -----------
+    This function visualizes the differences in HRV measures before and after preprocessing to assess the impact of data cleaning techniques. It generates bar charts comparing time and frequency domain measures across devices for selected conditions. The function leverages interactive widgets for selecting HRV features and conditions to be plotted.
+
+    Parameters
+    ----------
     data_chopped : dict
-        A nested dictionary containing the raw HRV data for each device and condition.
+        A dictionary containing the raw HRV data (RR intervals) for each device and condition.
     time_domain_features : dict
-        A nested dictionary containing the time domain measures of HRV for each device and condition, after pre-processing.
+        A dictionary containing time domain HRV measures for each device and condition, obtained after preprocessing the RR interval data.
     frequency_domain_features : dict
-        A nested dictionary containing the frequency domain measures of HRV for each device and condition, after pre-processing.
+        A dictionary containing frequency domain HRV measures for each device and condition, obtained similarly.
     devices : list
-        A list of strings representing the different devices used to collect the data.
+        A list of device identifiers used to collect the data.
     conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    bar_width : float, optional, default=0.20
-        The width of the bars in the bar charts.
-    width : int, optional, default=20
-        The width of the entire plot figure.
-    height : int, optional, default=25
-        The height of the entire plot figure.
+        A list of conditions under which the data was collected.
+    bar_width : float, optional
+        The width of the bars in the bar charts. Default is 0.20.
+    width : int, optional
+        The figure width. Default is 20.
+    height : int, optional
+        The figure height. Default is 25.
 
-    Returns:
-    --------
-    None
-
-    This function displays comparison bar charts using interactive widgets. The user can select the time and frequency domain features, and the condition, to visualize the bar charts.
+    Notes
+    -----
+    - The function initially calculates HRV measures for the original (unchopped) dataset to provide a baseline for comparison.
+    - Interactive widgets allow users to select which HRV features (from both time and frequency domains) and which condition to display.
+    - The comparison is visualized in two separate bar charts: one for time domain features and another for frequency domain features, allowing for an easy assessment of the preprocessing effects.
+    - The function is designed to be used in interactive Python environments, such as Jupyter notebooks, where widget functionality can be fully utilized.
     """
 
     # calculating all the time domain and frequency domain features by the hrvanalysis package for the original dataset
@@ -1581,24 +1745,29 @@ def result_comparison_plot(
 
 def unfolding_plot(data_pp, devices, conditions, width=8, height=10):
     """
-    This function creates a plot of RMSSD and heart rate values over time for a given device and condition.
+    Creates sequential plots of RMSSD (Root Mean Square of Successive Differences) and heart rate (HR) values over specified intervals for preprocessed data from a selected device and condition.
 
-    Parameters:
-    -----------
+    This function generates two plots: one for RMSSD and another for HR, plotted over time. The plots display how these values change over specified time intervals, allowing for an examination of variability and trends within a given condition. The user can interactively select the device, condition, and the time window for analysis through widgets.
+
+    Parameters
+    ----------
     data_pp : dict
-        A dictionary containing preprocessed data for each device and condition.
+        A dictionary containing preprocessed data for each device and condition. Each entry is expected to be a list of RR intervals in milliseconds.
     devices : list
-        A list of strings representing the different devices.
+        A list of strings representing the different devices from which data was collected.
     conditions : list
-        A list of strings representing the different conditions.
+        A list of strings representing the different conditions under which the data was collected.
     width : int, optional
-        An integer that represents the width of the plot. Default is 8.
+        The width of the plot in inches. Defaults to 8.
     height : int, optional
-        An integer that represents the height of the plot. Default is 10.
+        The height of the plot in inches. Defaults to 10.
 
-    Returns:
-    --------
-    None
+    Notes
+    -----
+    - The RMSSD values are calculated as the square root of the mean of the squares of successive differences between adjacent RR intervals.
+    - The HR is computed as the mean of 60,000 divided by RR intervals, reflecting the number of beats per minute.
+    - The function uses interactive IPython widgets to select the device, condition, and interval for which the data will be plotted. This interactivity requires execution in a Jupyter notebook or similar environment.
+    - Time (in seconds) specifies the interval over which RMSSD and HR are averaged and plotted.
     """
 
     sec_text = IntText(
@@ -1731,32 +1900,37 @@ def bar_plot(
     bar_width=0.20,
 ):
     """
-    This function creates a bar plot of the time domain and frequency domain features for each device and condition.
+    Creates bar plots for selected time domain and frequency domain Heart Rate Variability (HRV) features across different devices and conditions.
 
-    Parameters:
-    -----------
+    This function leverages interactive widgets to allow users to select specific HRV features for comparison. It generates two bar plots: one for a selected time domain feature and another for a frequency domain feature, comparing these across all specified conditions for each device. The plots provide a visual representation of the variability and differences in HRV metrics resulting from different experimental conditions and devices.
+
+    Parameters
+    ----------
     time_domain_features : dict
-        A dictionary containing the time domain features for each device and condition.
+        A nested dictionary containing time domain HRV features for each device and condition. The structure is {device: {condition: {feature: value}}}.
     frequency_domain_features : dict
-        A dictionary containing the frequency domain features for each device and condition.
+        A nested dictionary similar to `time_domain_features`, but containing frequency domain HRV features.
     devices : list
-        A list of strings that represent the different devices used to collect the data.
+        A list of device identifiers used for data collection.
     conditions : list
-        A list of strings that represent the different conditions in the task.
+        A list of experimental conditions under which the data was collected.
     width : int, optional
-        An integer that represents the width of the plot. Default is 20.
+        The figure width in inches. Defaults to 20.
     height : int, optional
-        An integer that represents the height of the plot. Default is 25.
+        The figure height in inches. Defaults to 25.
     bar_width : float, optional
-        A float that represents the width of each bar. Default is 0.20.
-    time_feature : str, optional
-        A string that represents the time domain feature to plot. Default is 'rmssd'.
-    frequency_feature : str, optional
-        A string that represents the frequency domain feature to plot. Default is 'hf'.
+        The width of the bars in the plot. Defaults to 0.20.
 
-    Returns:
-    --------
+    Notes
+    -----
+    - The function initializes with a predefined set of HRV features available for selection, based on the first device and condition in the provided data.
+    - Users can select which time and frequency domain features to plot using dropdown menus, enabling dynamic comparison across different conditions and devices.
+    - This function is designed for interactive use in Jupyter notebooks or similar environments where IPython widgets are supported.
+
+    Returns
+    -------
     None
+        The function does not return any value. It displays the plots inline.
     """
 
     time_features = list(time_domain_features[devices[0]][conditions[0]].keys())
@@ -1860,20 +2034,35 @@ def line_plot(
     height=25,
 ):
     """
-    Plots a line graph for time domain and frequency domain features for each device and condition.
+    Plots line graphs for selected time domain and frequency domain HRV features across different devices and conditions.
 
-    Parameters:
-    time_domain_features (dict): A dictionary containing time domain features for each device and condition.
-    frequency_domain_features (dict): A dictionary containing frequency domain features for each device and condition.
-    devices (list): A list of the devices used in the study.
-    conditions (list): A list of the conditions used in the study.
-    width (int): Width of the plot in inches.
-    height (int): Height of the plot in inches.
-    time_feature (str): Time domain feature to plot (default: 'rmssd').
-    frequency_feature (str): Frequency domain feature to plot (default: 'hf').
+    This function generates line plots for HRV features, allowing for the comparison of selected time domain and frequency domain metrics across various conditions and devices. It utilizes interactive widgets for the selection of HRV features to plot, facilitating a dynamic exploration of the data.
 
-    Returns:
+    Parameters
+    ----------
+    time_domain_features : dict
+        A dictionary containing the time domain HRV features for each device and condition, structured as {device: {condition: {feature: value}}}.
+    frequency_domain_features : dict
+        A dictionary similar to `time_domain_features` but containing frequency domain HRV features.
+    devices : list
+        A list of device identifiers that were used to collect the data.
+    conditions : list
+        A list of conditions under which the data was collected.
+    width : int, optional
+        The width of the plot figure in inches. Default is 20.
+    height : int, optional
+        The height of the plot figure in inches. Default is 25.
+
+    Notes
+    -----
+    - The function initializes with a set of available HRV features for selection based on the provided data for the first device and condition.
+    - Users can dynamically select which HRV feature to plot for both the time domain and frequency domain using dropdown menus.
+    - The function is designed to be used in interactive Python environments, such as Jupyter notebooks, where IPython widget functionality can be fully utilized.
+
+    Returns
+    -------
     None
+        The function does not return any value; it renders the plots inline.
     """
 
     time_features = list(time_domain_features[devices[0]][conditions[0]].keys())
@@ -1974,20 +2163,31 @@ def line_plot(
 
 def radar_plot(time_domain_features, criterion, devices, conditions):
     """
-    This function creates a radar plot of the time domain features of two devices (criterion and another device) for a given
-    condition. The function takes in the time domain features dictionary, criterion device name, another device name, and
-    the condition name as input and outputs a radar plot using the plotly library.
+    Creates a radar plot comparing time domain HRV features between a criterion device and another selected device for a specific condition using Plotly.
 
-    Parameters:
-    -----------
-    time_domain_features (dict): A dictionary containing the time domain features for each device and each condition
-    criterion (str): The name of the criterion device for comparison
-    device (str): The name of the device to be compared with the criterion device
-    condition (str): The name of the condition for which the comparison is to be made
+    This function visualizes differences in time domain HRV features (such as RMSSD, PNNI 50, mean HR, and SDNN) between two devices for a given condition. The radar plot facilitates easy comparison to identify similarities or disparities in HRV metrics between the devices. It leverages interactive widgets for selecting the comparison device and condition.
 
-    Returns:
-    -----------
+    Parameters
+    ----------
+    time_domain_features : dict
+        A dictionary containing the time domain HRV features for each device and each condition. The structure is {device: {condition: {feature: value}}}.
+    criterion : str
+        The name of the criterion device for comparison.
+    devices : list
+        A list including the criterion device and other devices available for comparison.
+    conditions : list
+        A list of conditions under which the HRV data was collected.
+
+    Notes
+    -----
+    - The function uses Plotly to create radar (or spider) charts, providing an interactive and visually appealing way to compare HRV features.
+    - Users can select the device to compare with the criterion device and the condition for the comparison using dropdown menus.
+    - The radar plot includes four key HRV metrics: RMSSD, PNNI 50, mean HR, and SDNN, allowing for a comprehensive comparison of time domain features.
+
+    Returns
+    -------
     None
+        The function renders the radar plot inline and does not return any value.
     """
 
     def plot_spider_chart(device, condition):
@@ -2093,23 +2293,33 @@ def display_changes(
     time_domain_features, frequency_domain_features, devices, conditions
 ):
     """
-    Display changes in time and frequency domain features for given devices and conditions.
+    Displays changes in time and frequency domain features for selected devices and conditions through interactive DataFrames.
 
-    Parameters:
-    -----------
-    - time_domain_features (dict): dictionary containing time domain features for different devices and conditions
-    - frequency_domain_features (dict): dictionary containing frequency domain features for different devices and conditions
-    - devices (list): list of devices to be analyzed
-    - conditions (list): list of conditions to be analyzed
-    - time_feature (str): time domain feature to be analyzed (default 'rmssd')
-    - frequency_feature (str): frequency domain feature to be analyzed (default 'hf')
+    This function provides an interactive analysis of HRV (Heart Rate Variability) features, allowing users to select specific time domain and frequency domain features to examine. It displays formatted DataFrames showing the selected features for given devices and conditions, along with their changes between conditions. The function is designed to facilitate a detailed comparison of HRV metrics across various experimental setups.
 
-    Returns:
-    -----------
-    - None
+    Parameters
+    ----------
+    time_domain_features : dict
+        A dictionary containing the time domain HRV features for each device and condition. The structure is {device: {condition: {feature: value}}}.
+    frequency_domain_features : dict
+        A dictionary similar to `time_domain_features` but for frequency domain HRV features.
+    devices : list
+        A list of device identifiers used to collect the HRV data.
+    conditions : list
+        A list of conditions under which the HRV data was collected.
 
-    Displays formatted DataFrames showing time and frequency domain features and their changes for given devices and conditions.
+    Notes
+    -----
+    - The function uses interactive IPython widgets to allow users to select the HRV feature they wish to analyze. This interactivity requires execution in a Jupyter notebook or similar environment.
+    - DataFrames are displayed showing the selected features across all devices and conditions, as well as the changes in these features between conditions. Changes are calculated as the difference between consecutive conditions for each device.
+    - This approach provides a visual and numerical representation of how HRV features vary with experimental conditions, aiding in the interpretation and analysis of HRV data.
+
+    Returns
+    -------
+    None
+        The function renders the DataFrames inline and does not return any value.
     """
+
     time_features = list(time_domain_features[devices[0]][conditions[0]].keys())
     frequency_features = list(
         frequency_domain_features[devices[0]][conditions[0]].keys()
@@ -2216,27 +2426,46 @@ def save_data(
     save_as_csv=False,
 ):
     """
-    Saves the processed data into a csv file.
+    Saves the comprehensive dataset, including time domain features, frequency domain features, and other relevant data, into a CSV file if specified.
 
-    Parameters:
-    -----------
-    pp (str): Participant ID.
-    path (str): Path to save the file.
-    time_domain_features (dict): Time domain features.
-    frequency_domain_features (dict): Frequency domain features.
-    data_pp (dict): Raw data.
-    devices (list): List of devices used.
-    conditions (list): List of conditions in the study.
-    events (dict): Dictionary containing the events and their corresponding timestamps.
-    nbbi (dict, optional): Dictionary containing the number of detected and removed artefacts. Defaults to None.
-    artefact (dict, optional): Dictionary containing the detected beat-to-beat intervals. Defaults to None.
-    timebefore (dict, optional): Dictionary containing the time before an event. Defaults to None.
-    timeafter (dict, optional): Dictionary containing the time after an event. Defaults to None.
-    save_as_csv (bool, optional): Boolean value indicating whether to save the data as a CSV file. Defaults to False.
+    This function compiles data from various sources into a single DataFrame and optionally saves it to a CSV file. The dataset includes time domain and frequency domain HRV features, artefact information, the number of beats before and after cropping, among other details, for each device and condition in the study.
 
-    Returns:
-    -----------
-    df_all (pandas.DataFrame): Dataframe containing all the processed data.
+    Parameters
+    ----------
+    pp : str
+        Participant ID used to identify the dataset.
+    path : str
+        Directory path where the file will be saved.
+    time_domain_features : dict
+        Dictionary containing time domain HRV features for each device and condition.
+    frequency_domain_features : dict
+        Dictionary containing frequency domain HRV features for each device and condition.
+    data_pp : dict
+        Dictionary containing preprocessed HRV data for each device and condition.
+    devices : list
+        List of devices used to collect HRV data.
+    conditions : list
+        List of conditions under which HRV data was collected.
+    events : dict
+        Dictionary containing the events and their corresponding timestamps.
+    artefact : dict, optional
+        Dictionary containing information about detected artefacts for each device and condition. Defaults to None.
+    nibi_before_cropping : dict, optional
+        Dictionary containing the number of inter-beat intervals (IBIs) before data cropping for each device and condition. Defaults to None.
+    nibi_after_cropping : dict, optional
+        Dictionary containing the number of IBIs after data cropping for each device and condition. Defaults to None.
+    save_as_csv : bool, optional
+        Flag indicating whether to save the compiled data as a CSV file. Defaults to False.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing all the processed data, including HRV features, artefact information, and IBIs, for each device and condition.
+
+    Notes
+    -----
+    - The function combines HRV features, artefact counts, and IBIs into a single DataFrame, facilitating comprehensive analysis.
+    - If `save_as_csv` is True, the DataFrame is saved to a CSV file named after the participant ID, allowing for easy data retrieval and further analysis.
     """
 
     def create_df(
