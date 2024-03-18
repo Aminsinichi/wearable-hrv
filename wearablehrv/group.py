@@ -1,9 +1,4 @@
-##################################GROUP####################################
-##################################GROUP####################################
-##################################GROUP####################################
-############################### Wearablehrv ###############################
-
-############################Importing Modules############################
+# Group pipeline for Wearablehrv package
 
 import os
 import pandas as pd
@@ -27,27 +22,32 @@ from IPython.display import display, clear_output
 
 def import_data(path, conditions, devices, features):
     """
-    This function imports data from multiple CSV files located in a directory, and structures the data in a dictionary that represents the devices, features, and conditions of the data.
+    Imports data from multiple CSV files located in a specific directory and structures the data into a nested dictionary based on devices, features, and conditions.
 
-    Parameters:
-    -----------
-    file_names : list
-        A list of strings containing the file names of the CSV files to be imported.
+    This function scans a directory for CSV files, reads the data from these files, and organizes it into a nested dictionary. This dictionary is structured to allow easy access to data based on device, feature, and condition. Each file is assumed to contain data for all conditions, devices, and features specified by the parameters.
+
+    Parameters
+    ----------
     path : str
-        The path to the directory where the CSV files are located.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    devices : list
+        The path to the directory where the CSV files are located. The function expects to find files named in a specific pattern that includes the participant ID.
+    conditions : list of str
+        A list of strings representing the different experimental conditions under which the data was collected.
+    devices : list of str
         A list of strings representing the different devices used to collect the data.
-    features : list
-        A list of strings representing the different features of the data.
+    features : list of str
+        A list of strings representing the different features recorded in the data.
 
-    Returns:
-    --------
-    data : dict
-        A nested dictionary that represents the imported data, with keys for each device, feature, and condition.
+    Returns
+    -------
+    tuple
+        A tuple containing two elements:
+        - data: A nested dictionary with the structure {device: {feature: {condition: {participant: [values]}}}}, representing the imported data.
+        - file_names: A list of the file names that were imported, providing a record of which files were processed.
+
+    Notes
+    -----
+    - The function automatically identifies CSV files in the provided path and imports data from them. The expected file naming convention and data structure within the files should match the specified devices, conditions, and features.
     """
-
     # list all files in the directory
     files = os.listdir(path)
     # filter the list to only include CSV files with names matching the pattern "Pxx.csv"
@@ -138,26 +138,29 @@ def nan_handling(data, devices, features, conditions):
 
 def save_data(data, path, conditions, devices, features, file_names):
     """
-    This function takes in a dictionary of data, along with information about the experimental conditions, devices, and features, and saves the data to a CSV file.
+    Saves aggregated data from multiple sources to a CSV file based on specified conditions, devices, and features.
 
-    Parameters:
-    -----------
+    This function compiles data into a single DataFrame and saves it to a CSV file. The data is organized by combining specified conditions, devices, and features into unique column names.
+
+    Parameters
+    ----------
     data : dict
-        A nested dictionary that represents the data to be saved, with keys for each device, feature, and condition.
+        A nested dictionary with structure {device: {feature: {condition: [values]}}}, representing the data to be saved.
     path : str
-        The path to the directory where the CSV file should be saved.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    features : list
-        A list of strings representing the different features of the data.
-    file_names : list
-        A list of strings containing the file names of the participants.
+        The directory path where the CSV file will be saved.
+    conditions : list of str
+        Experimental conditions under which the data was collected.
+    devices : list of str
+        Devices used to collect the data.
+    features : list of str
+        Features present in the data.
+    file_names : list of str
+        File names corresponding to the participants' data, used to identify the source files.
 
-    Returns:
-    --------
+    Returns
+    -------
     None
+        The function does not return any value. It saves the aggregated data into a CSV file named 'group_data.csv' in the specified directory.
     """
 
     group_data = pd.DataFrame()
@@ -1354,18 +1357,24 @@ def mape_analysis(
 
 def mape_plot(mape_data, features, conditions, devices):
     """
-    Plots a grouped bar chart of MAPE for all devices for a specific feature across all conditions.
+    Plots a grouped bar chart of Mean Absolute Percentage Error (MAPE) for different devices across all conditions for a selected feature.
 
-    Parameters:
-    -----------
+    This function generates an interactive grouped bar chart that allows the user to select a feature from a dropdown menu. The chart displays the MAPE values for each device across all conditions.
+
+    Parameters
+    ----------
     mape_data : dict
-        The MAPE results for each device, feature, and condition.
-    features : list
-        A list of strings representing the different features.
-    conditions : list
-        A list of strings representing the different experimental conditions.
-    devices : list
-        A list of strings representing the different devices.
+        A dictionary containing the MAPE results, structured as {device: {feature: {condition: {"MAPE": value}}}}. This structure allows for indexing by device, feature, and condition to retrieve the MAPE values.
+    features : list of str
+        A list of strings representing the features for which MAPE values are available. The user can select from these features to generate the plot.
+    conditions : list of str
+        A list of strings representing the different experimental conditions. These conditions form the x-axis of the bar chart.
+    devices : list of str
+        A list of strings representing the different devices. MAPE values for each device are plotted as groups of bars within each condition.
+
+    Notes
+    -----
+    - The bar chart includes a legend indicating the devices, and the MAPE values are expressed as percentages.
     """
 
     def create_mape_plot(feature):
@@ -1431,32 +1440,33 @@ def mape_plot(mape_data, features, conditions, devices):
 
 def check_normality(data, conditions, devices, features, alpha=0.05):
     """
-    This function analyzes the normality of data using the Shapiro-Wilk test and summarizes conditions requiring transformations for selected features.
+    Analyzes the normality of data using the Shapiro-Wilk test for selected features across devices and conditions.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data : dict
-        A nested dictionary containing the data, with keys for devices, features, and conditions.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    features : list
-        A list of strings representing the different features of the data.
-    selected_features : list
-        A list of strings representing specific features to summarize for transformations.
-    alpha : float, optional, default: 0.05
-        The significance level for the Shapiro-Wilk test.
+        Nested dictionary with structure {device: {feature: {condition: [values]}}}.
+    conditions : list of str
+        Experimental conditions.
+    devices : list of str
+        Devices used for data collection.
+    features : list of str
+        Features of the data to analyze.
+    alpha : float, optional
+        Significance level for the Shapiro-Wilk test, default is 0.05.
 
-    Returns:
-    --------
+    Returns
+    -------
     normality_results : dict
-        A nested dictionary containing the results of the Shapiro-Wilk test for each device, feature, and condition.
+        Results of the Shapiro-Wilk test, structured as {device: {feature: {condition: {'p_value': float, 'is_normal': bool}}}}.
     suggestions : dict
-        A nested dictionary suggesting transformations if data is not normally distributed.
+        Suggestions for transformation if data is not normally distributed, with the same structure as `normality_results`.
     transformation_summary : dict
-        A dictionary summarizing conditions that require a transformation for each device and selected feature.
+        Summary of conditions requiring transformation for each device and feature, formatted as {device: {feature: [conditions]}}.
+
+    This function checks each combination of device, feature, and condition for normality. It suggests transformations for non-normal distributions and summarizes which conditions require transformation.
     """
+
     normality_results = {
         device: {
             feature: {condition: {} for condition in conditions} for feature in features
