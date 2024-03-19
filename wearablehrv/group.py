@@ -14,6 +14,7 @@ import ipywidgets as widgets
 from scipy.stats import linregress
 from copy import deepcopy
 from IPython.display import display, clear_output
+from pathlib import Path
 
 ###########################################################################
 ###########################################################################
@@ -48,20 +49,18 @@ def import_data(path, conditions, devices, features):
     -----
     - The function automatically identifies CSV files in the provided path and imports data from them. The expected file naming convention and data structure within the files should match the specified devices, conditions, and features.
     """
+    path = Path(path)
     # list all files in the directory
-    files = os.listdir(path)
-    # filter the list to only include CSV files with names matching the pattern "Pxx.csv"
-    file_names = [f for f in files if f.endswith(".csv")]
+    file_names = [f.name for f in path.glob("*.csv") if f.is_file()]
     # sort the resulting list of file names
     file_names.sort()
 
-    path_files = [os.path.join(path, filename) for filename in file_names]
     participants = (
         {}
     )  # this variable is a dictionary. The keys are each participant's file name, e.g., P01.csv. the values are a big pandas containing the csv file for each participant
 
-    for pp, path_file in zip(file_names, path_files):
-        participants[pp] = pd.read_csv(path_file)
+    for pp in file_names:
+        participants[pp] = pd.read_csv(path / pp)
 
     data = {
         device: {
@@ -146,8 +145,8 @@ def save_data(data, path, conditions, devices, features, file_names):
     ----------
     data : dict
         A nested dictionary with structure {device: {feature: {condition: [values]}}}, representing the data to be saved.
-    path : str
-        The directory path where the CSV file will be saved.
+    path : str or Path
+        The directory path where the CSV file will be saved. Can be provided as a string or a Path object from the pathlib module.
     conditions : list of str
         Experimental conditions under which the data was collected.
     devices : list of str
@@ -176,7 +175,8 @@ def save_data(data, path, conditions, devices, features, file_names):
                 group_data[column_name] = column
 
     # Save the datafile:
-    path_save = path + "group_data.csv"  # creating the path
+    path = Path(path)
+    path_save = path / "group_data.csv"
 
     group_data.to_csv(path_save, index=False)
     print("Data Saved Succesfully!")
@@ -212,8 +212,8 @@ def signal_quality(
     data : dict
         A nested dictionary containing the data to be analyzed. Keys represent each device, feature, and condition.
 
-    path : str
-        The directory path where the quality report CSV files should be saved.
+    path : str or Path
+        The directory path where the quality report CSV files should be saved. Can be provided as a string or a Path object from the pathlib module.
 
     conditions : list
         A list of strings indicating the different experimental conditions in the data.
@@ -348,8 +348,9 @@ def signal_quality(
 
     # Save the datafiles:
     if save_as_csv == True:
-        path_save_quality = path + "quality_report1.csv"  # creating the path
-        path_save_summary = path + "quality_report2.csv"
+        path = Path(path)
+        path_save_quality = path / "quality_report1.csv"
+        path_save_summary = path / "quality_report2.csv"
 
         quality_df.to_csv(path_save_quality, index=False)
         summary_df.to_csv(path_save_summary)
@@ -487,9 +488,7 @@ def signal_quality_plot1(
 ###########################################################################
 
 
-def signal_quality_plot2(
-    summary_df, conditions, devices, condition_selection=False, condition=None
-):
+def signal_quality_plot2(summary_df, condition_selection=False, condition=None):
     """
     Generates a stacked bar plot to visualize data quality by device. This function allows the option to either
     display data for all conditions or focus on a single specified condition. It aggregates data quality metrics
@@ -754,7 +753,7 @@ def box_plot(data, conditions, features, devices):
 ###########################################################################
 
 
-def radar_plot(data, criterion, conditions, features, devices):
+def radar_plot(data, criterion, conditions, devices):
     """
     This function creates an interactive radar plot comparing a selected device to a criterion device for the given data, conditions, features, and devices. It uses Plotly and Jupyter widgets for visualization and user interaction.
 
@@ -766,8 +765,6 @@ def radar_plot(data, criterion, conditions, features, devices):
         The criterion device to be compared with the selected device.
     conditions : list
         A list of strings representing the different experimental conditions of the data.
-    features : list
-        A list of strings representing the different features of the data.
     devices : list
         A list of strings representing the different devices used to collect the data.
 
@@ -1263,8 +1260,8 @@ def mape_analysis(
         A list of strings representing the different conditions.
     features : list
         A list of strings representing the different features.
-    path : str
-        The path where the CSV file will be saved.
+    path : str or Path
+        The path where the CSV file will be saved. Can be provided as a string or a Path object from the pathlib module. If not specified, the results are not saved to a file. Default is None.
     alpha : float
         Confidence level for the intervals.
     save_as_csv : bool
@@ -1344,7 +1341,8 @@ def mape_analysis(
             rows,
             columns=["Device", "Feature", "Condition", "MAPE", "CI Lower", "CI Upper"],
         )
-        df.to_csv(path + "mape_data.csv", index=False)
+        path = Path(path)
+        df.to_csv(path / "mape_data.csv", index=False)
         print("MAPE data saved successfully to", path + "mape_data.csv")
 
     return mape_data
@@ -1569,25 +1567,44 @@ def regression_analysis(
     data, criterion, conditions, devices, features, path, save_as_csv=False
 ):
     """
-    This function performs linear regression analysis on the given data, conditions, features, and devices. It calculates the slope, intercept, r_value, p_value, and std_err for each device and criterion pair, feature, and condition.
+    Performs linear regression analysis on the given data against a criterion device for specified conditions, devices, and features. It calculates the regression parameters (slope, intercept, R-value, P-value, and standard error) for each device-feature-condition combination compared to the criterion. Optionally, saves the regression results to a CSV file.
 
     Parameters:
     -----------
     data : dict
-        A nested dictionary containing the data, with keys for devices, features, and conditions.
+        A nested dictionary containing the data, organized as {device: {feature: {condition: values}}}. The keys represent devices, features, and conditions, respectively, with values being the data points collected under those criteria.
+
     criterion : str
-        A string representing the device used as a criterion for comparison.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    features : list
-        A list of strings representing the different features of the data.
+        The name of the device used as a benchmark or standard for comparison in the regression analysis.
+
+    conditions : list of str
+        The experimental conditions under which the data was collected. Each condition corresponds to a specific set of circumstances or parameters under which the data points were gathered.
+
+    devices : list of str
+        The devices from which data was collected. This list should include the criterion device and any other devices whose data is to be analyzed against the criterion.
+
+    features : list of str
+        The features or variables of interest within the data. These could represent different metrics or measurements collected from the devices.
+
+    path : str or Path, optional
+        The directory path where the output CSV file containing the regression analysis results will be saved. Can be provided as a string or a Path object from the pathlib module. If not specified, the results are not saved to a file.
+
+    save_as_csv : bool, optional
+        A flag indicating whether to save the regression results to a CSV file. If True, the results are saved to the specified path. If False, the results are not saved to a file. Default is False.
+
+    alpha : float, optional
+        The confidence level for the confidence intervals in the regression analysis. Default value is set to 0.95, representing a 95% confidence level.
 
     Returns:
     --------
     regression_data : dict
-        A nested dictionary containing the regression results (slope, intercept, r_value, p_value, and std_err) for each device and criterion pair, feature, and condition.
+        A nested dictionary containing the regression analysis results for each device-feature-condition combination. The structure is {device: {feature: {condition: {'slope': value, 'intercept': value, 'r_value': value, 'p_value': value, 'std_err': value}}}}, where each parameter represents the slope, intercept, correlation coefficient, P-value, and standard error of the regression, respectively.
+
+    Notes:
+    -----
+    - This function assumes that the data for each device-feature-condition combination is directly comparable and that linear regression is an appropriate analysis method.
+    - The regression analysis is performed for each device against the criterion for every feature and condition specified.
+    - The function outputs detailed regression results, facilitating the assessment of the linear relationship between the data from each device and the criterion across different conditions and features.
     """
 
     # Defining empty dictionaries to save regression data analysis
@@ -1674,7 +1691,8 @@ def regression_analysis(
         )
 
         # Save DataFrame to CSV
-        df.to_csv(path + "regression_data.csv", index=False)
+        path = Path(path)
+        df.to_csv(path / "regression_data.csv", index=False)
         print("CSV File is saved successfully")
 
     return regression_data
@@ -2014,25 +2032,39 @@ def heatmap_plot(data, criterion, devices, conditions, features):
 
 def icc_analysis(data, criterion, devices, conditions, features, path, save_as_csv):
     """
-    This function calculates the Intraclass Correlation Coefficient (ICC) for each device compared to the criterion device, for each condition and feature.
+    Calculates the Intraclass Correlation Coefficient (ICC) for comparing the reliability of measurements among devices against a criterion device, across different conditions and features. The ICC assesses the consistency or reproducibility of quantitative measurements made by different observers measuring the same quantity.
 
     Parameters:
     -----------
     data : dict
-        A nested dictionary containing the data, with keys for devices, features, and conditions.
+        A nested dictionary with structure {device: {feature: {condition: [values]}}}. It contains the measurement data for each device across specified conditions and features.
+
     criterion : str
-        A string representing the device used as a criterion for comparison.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    features : list
-        A list of strings representing the different features of the data.
+        The name of the device used as a reference or standard for comparison in the analysis.
+
+    devices : list of str
+        A list containing the names of the devices whose data is analyzed. This should include the criterion device.
+
+    conditions : list of str
+        The experimental conditions under which data was collected. Conditions are used to segment and compare data.
+
+    features : list of str
+        The specific data features or measurements that are analyzed for reliability.
+
+    path : str or Path
+        The path where the result CSV file (if saving is enabled) will be stored. Can be a string or a Path object from the pathlib module.
+
+    save_as_csv : bool
+        Determines whether to save the ICC analysis results to a CSV file. If True, the results are saved to the specified path.
 
     Returns:
     --------
     icc_data : dict
-        A nested dictionary containing the ICC results for each device, feature, and condition.
+        A nested dictionary with the ICC results organized by device, feature, and condition. Each entry contains the ICC value and its confidence interval, reflecting the measurement consistency.
+
+    Notes:
+    -----
+    - If `save_as_csv` is True, the function saves the detailed ICC results, including ICC type, value, 95% confidence interval, and p-value, to a CSV file at the specified path, facilitating easy access and further analysis.
     """
 
     # Defining empty dictionaries to save ICC data analysis
@@ -2130,7 +2162,9 @@ def icc_analysis(data, criterion, devices, conditions, features, path, save_as_c
         )
 
         # Save DataFrame to CSV
-        df.to_csv(path + "icc_data.csv", index=False)
+        path = Path(path)
+        save_path = path / "icc_data.csv"
+        df.to_csv(save_path, index=False)
         print("ICC data saved successfully!")
 
     return icc_data
@@ -2312,26 +2346,41 @@ def blandaltman_analysis(
     data, criterion, devices, conditions, features, path, save_as_csv=False
 ):
     """
-    This function calculates the Bland-Altman analysis for each device compared to the criterion device, for each condition and feature.
-    It now also includes the 95% Confidence Interval for bias and Limits of Agreements.
+    Calculates the Bland-Altman analysis to assess the agreement between measurements from various devices compared to a criterion device, across different conditions and features. This analysis includes calculating bias, limits of agreement, and their 95% Confidence Intervals.
 
     Parameters:
     -----------
     data : dict
-        A nested dictionary containing the data for each device, feature, and condition.
+        Nested dictionary containing the data, organized as {device: {feature: {condition: [values]}}}. It includes measurements for each device, feature, and condition.
+
     criterion : str
-        A string representing the name of the criterion device.
-    devices : list
-        A list of strings representing the different devices used to collect the data.
-    conditions : list
-        A list of strings representing the different experimental conditions of the data.
-    features : list
-        A list of strings representing the different features of the data.
+        The name of the device used as the standard for comparison.
+
+    devices : list of str
+        List of device names whose data will be analyzed.
+
+    conditions : list of str
+        Experimental conditions under which the data was collected.
+
+    features : list of str
+        Measured features of interest.
+
+    path : str or Path, optional
+        Directory path where the results CSV file will be saved if save_as_csv is True. Accepts both string paths and Path objects from the pathlib module.
+
+    save_as_csv : bool, optional
+        If True, saves the Bland-Altman analysis results to a CSV file specified by the path parameter. Default is False.
 
     Returns:
     --------
     blandaltman_data : dict
-        A nested dictionary containing the Bland-Altman results for each device, feature, and condition.
+        Nested dictionary with the Bland-Altman analysis results for each device, feature, and condition, including bias, standard deviation (SD), limits of agreement (LoA), and their 95% Confidence Intervals.
+
+    Notes:
+    -----
+    - The Bland-Altman analysis is a statistical method used to compare two quantitative measurement techniques.
+    - In addition to bias and limits of agreement, this function calculates and includes the 95% Confidence Intervals for both bias and LoAs.
+    - If save_as_csv is True and a path is provided, the function outputs the results to a CSV file, facilitating easy access to and further analysis of the data.
     """
 
     # Defining empty dictionaries to save Bland-Altman data analysis
@@ -2448,7 +2497,8 @@ def blandaltman_analysis(
             ],
         )
 
-        df.to_csv(path + "blandaltman_data.csv", index=False)
+        path = Path(path)
+        df.to_csv(path / "blandaltman_data.csv", index=False)
         print("Blandaltman Data saved successfully!")
 
     return blandaltman_data
@@ -2460,7 +2510,6 @@ def blandaltman_analysis(
 
 
 def blandaltman_plot(
-    blandaltman_data,
     data,
     criterion,
     conditions,

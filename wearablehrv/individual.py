@@ -18,6 +18,7 @@ from hrvanalysis import get_time_domain_features
 from hrvanalysis import get_frequency_domain_features
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
+from pathlib import Path
 
 ###########################################################################
 ###########################################################################
@@ -32,8 +33,8 @@ def labfront_conversion(path, pp, file_name, device_name, date):
 
     Parameters
     ----------
-    path : str
-        The directory path pointing to the location of the Labfront data.
+    path : str or Path
+        The directory path pointing to the location of the Labfront data. Can be a string or a Path object.
     pp : str
         The unique ID of the participant for which the data is being processed.
     file_name : str
@@ -53,14 +54,17 @@ def labfront_conversion(path, pp, file_name, device_name, date):
     The function prints a message upon successful completion of the conversion and saving process.
     """
 
-    labfront = pd.read_csv(path + file_name, skiprows=5)
+    path = Path(path)
+    labfront_file_path = path / file_name
+    output_file_path = path / f"{pp}_{device_name}.csv"
+    labfront = pd.read_csv(labfront_file_path + file_name, skiprows=5)
     # convert isoDate to datetime column
     labfront["isoDate"] = pd.to_datetime(labfront["isoDate"])
     # filter rows for the selected date
     labfront = labfront[labfront["isoDate"].dt.date == pd.to_datetime(date).date()]
     labfront = labfront[["unixTimestampInMs", "bbi"]]
     labfront = labfront.rename(columns={"unixTimestampInMs": "timestamp", "bbi": "rr"})
-    labfront.to_csv(path + pp + "_" + device_name + ".csv", index=False)
+    labfront.to_csv(output_file_path, index=False)
 
     print("Dataset Successfully Converted and Saved in Your Path!")
 
@@ -81,8 +85,9 @@ def empatica_conversion(path, pp):
 
     Parameters
     ----------
-    path : str
+    path : str or Path
         The directory path pointing to the location of the participant's Empatica data.
+        This can be provided as a string or a Path object from the pathlib module.
     pp : str
         The unique ID of the participant whose Empatica data is to be converted.
 
@@ -99,7 +104,8 @@ def empatica_conversion(path, pp):
     - The function assumes Avro files contain the 'systolicPeaks' field with peak times in nanoseconds.
     - The final CSV file excludes the last timestamp since there's no corresponding IBI.
     """
-    avrofiles_path = path + "/" + pp + "_empatica" + "/raw_data" + "/v6"
+    path = Path(path)
+    avrofiles_path = path / f"{pp}_empatica/raw_data/v6"
 
     # Function to read systolicPeaks data from a single Avro file
     def read_systolic_peaks_from_file(avro_file):
@@ -114,11 +120,11 @@ def empatica_conversion(path, pp):
 
     # Iterate through all Avro files in the given directory and combine the 'systolicPeaks' data
     combined_systolic_peaks_ns = []
-    for file in os.listdir(avrofiles_path):
-        if file.endswith(".avro"):
-            avro_file = os.path.join(avrofiles_path, file)
-            systolic_peaks = read_systolic_peaks_from_file(avro_file)
-            combined_systolic_peaks_ns.extend(systolic_peaks["peaksTimeNanos"])
+    for avro_file in avrofiles_path.glob(
+        "*.avro"
+    ):  # Using Path.glob to find .avro files
+        systolic_peaks = read_systolic_peaks_from_file(avro_file)
+        combined_systolic_peaks_ns.extend(systolic_peaks["peaksTimeNanos"])
 
     # convert each nanosecond value to millisecond
     combined_systolic_peaks_ms = [x // 1000000 for x in combined_systolic_peaks_ns]
@@ -132,7 +138,8 @@ def empatica_conversion(path, pp):
     # turn the dataframe into a pandas dataframe
     df = pd.DataFrame(data)
     # saving the file
-    df.to_csv(path + pp + "_empatica.csv", index=False)
+    output_path = path / f"{pp}_empatica.csv"  # Construct the output path using Path
+    df.to_csv(output_path, index=False)
 
     print("Data saved succesfully in your path")
 
@@ -150,8 +157,9 @@ def define_events(path, pp, conditions, already_saved=True, save_as_csv=False):
 
     Parameters
     ----------
-    path : str
+    path : str or Path
         The path to the directory where the events file should be saved or has been saved.
+        Can be a string or a Path object from the pathlib module.
     pp : str
         The ID of the participant for whom the events are being defined.
     conditions : list of str
@@ -173,7 +181,8 @@ def define_events(path, pp, conditions, already_saved=True, save_as_csv=False):
     - The 'conditions' parameter should match the conditions expected to be found or entered for the events.
     """
     # Define the path to the events file
-    path_events = path + pp + "_events.csv"  # creathing the path
+    path = Path(path)
+    path_events = path / f"{pp}_events.csv"
 
     if (
         already_saved == True
@@ -317,6 +326,7 @@ def import_data(path, pp, devices):
     ----------
     path : str
         The directory path where the data files corresponding to the participant are located.
+        Can be a string or a Path object from the pathlib module.
     pp : str
         The unique ID of the participant whose data is to be imported.
     devices : list of str
@@ -343,14 +353,16 @@ def import_data(path, pp, devices):
     devices, necessitating specific preprocessing steps for each.
     """
 
+    path = Path(path)
+
     data = {
         device: {} for device in devices
     }  # creating an empty dictionary to store data from all devices
     # 2. reading data from devices:
 
     for device in devices:
-        path_vu = path + pp + "_" + "vu" + ".txt"
-        path_devices = path + pp + "_" + device + ".csv"
+        path_vu = path / f"{pp}_vu.txt"
+        path_devices = path / f"{pp}_{device}.csv"
 
         if device == "vu":  # this is the text file exported from VU-DAMS
             data[device] = pd.read_csv(path_vu, sep="\t", skiprows=1)
@@ -1109,8 +1121,8 @@ def save_backup(pp, path, data_chopped):
     -----------
     pp : str
         The name of the preprocessing applied to the data.
-    path : str
-        The path where the pickle file will be saved.
+    path : str or Path
+        The path where the pickle file will be saved. Can be a string or a Path object from the pathlib module.
     data_chopped : dict
         A dictionary containing the chopped data that has been processed.
 
@@ -1121,8 +1133,8 @@ def save_backup(pp, path, data_chopped):
     This function will print a message indicating if the data was saved successfully. It does not have a return value.
     """
 
-    # Save data_chopped
-    filename = os.path.join(path, f"{pp}_data_chopped.pkl")
+    path = Path(path)
+    filename = path / f"{pp}_data_chopped.pkl"
     with open(filename, "wb") as file:
         pickle.dump(data_chopped, file)
 
@@ -1136,29 +1148,31 @@ def save_backup(pp, path, data_chopped):
 
 def import_backup(pp, path):
     """
-    Saves the processed and chopped data into a pickle file for backup or further processing.
+    Loads the processed and chopped data from a pickle file.
 
-    This function serializes the given dictionary containing processed and segmented data into a pickle file,
-    allowing for storage and retrieval. The file is saved with a name indicating the preprocessing
-    applied and is intended for backup or subsequent analysis steps.
+    This function deserializes the data from a pickle file containing processed and segmented data,
+    allowing for retrieval and further analysis. The file is identified with the preprocessing identifier.
 
     Parameters
     ----------
     pp : str
-        The identifier or name of the preprocessing applied to the data, used to name the output file.
-    path : str
-        The directory path where the pickle file will be saved.
+        The identifier or name of the preprocessing applied to the data, used to identify the output file.
+    path : str or Path
+        The directory path where the pickle file will be saved. Can be provided as a string or a Path object from the pathlib module.
+
+    Returns
+    -------
     data_chopped : dict
         A dictionary containing the chopped data that has undergone preprocessing. This data is
-        serialized and saved to a file.
+        deserialized and loaded from the file.
 
     Notes
     -----
-    - The output filename is constructed using the preprocessing identifier and a '_data_chopped.pkl' suffix.
-    - A message is printed upon successful saving of the data, indicating the completion of the operation.
+    - The input filename is constructed using the preprocessing identifier and a '_data_chopped.pkl' suffix.
+    - A message is printed upon successful loading of the data, indicating the completion of the operation.
     """
-    # Read the file
-    filename = os.path.join(path, f"{pp}_data_chopped.pkl")
+    path = Path(path)
+    filename = path / f"{pp}_data_chopped.pkl"
     with open(filename, "rb") as file:
         data_chopped = pickle.load(file)
 
@@ -2433,8 +2447,8 @@ def save_data(
     Parameters
     ----------
     pp : str
-        Participant ID used to identify the dataset.
-    path : str
+        Participant ID used to identify the dataset. Can be a string or a Path object from the pathlib module.
+    path : str or Path
         Directory path where the file will be saved.
     time_domain_features : dict
         Dictionary containing time domain HRV features for each device and condition.
@@ -2533,7 +2547,8 @@ def save_data(
     df_all["time"] = events["timestamp"][0]  # attaching the starting time point
 
     if save_as_csv:
-        path_save = path + pp + ".csv"  # creating the path
+        path = Path(path)
+        path_save = path / f"{pp}.csv"
         df_all.to_csv(path_save, index=False)
         print("Data Saved Successfully! We are done! :) ")
 
