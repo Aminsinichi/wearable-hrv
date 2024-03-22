@@ -21,7 +21,6 @@ release = "0.1.12"
 
 extensions = [
     "sphinx.ext.autodoc",
-    "m2r2",
     "sphinx_markdown_tables",
     "sphinx_rtd_theme",
 ]
