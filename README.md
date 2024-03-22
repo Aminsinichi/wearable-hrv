@@ -5,6 +5,7 @@
 ![Supported Python Versions](https://img.shields.io/pypi/pyversions/wearablehrv.svg)
 ![Last Commit](https://img.shields.io/github/last-commit/Aminsinichi/wearable-hrv)
 [![Twitter Follow](https://img.shields.io/twitter/follow/AminSinichi.svg?style=social)](https://twitter.com/AminSinichi)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Aminsinichi/wearable-hrv/master?labpath=docs%2Fexamples%2F)
 
 `wearablehrv` is a Python package that comes in handy if you want to validate wearables and establish their accuracy in terms of heart rate (HR) and heart rate variability (HRV). `wearablehrv` is a complete and comprehensive pipeline that helps you go from your recorded raw data through all the necessary pre-processing steps, data analysis, and many visualization tools with graphical user interfaces.
 
@@ -35,6 +36,10 @@ For the complete documentation of the API and modules, visit:
 - [Determine the signal quality of your wearables](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/2.group_signal_quality.ipynb)
 - [Perform four major statistical analyses to determine validity](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/3.group_data_analysis.ipynb)
 - [Descriptive plots for your group data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/4.group_data_plotting.ipynb)
+
+You can also explore the example notebooks directly in your browser without installing any packages by using Binder. Simply click the badge below to get started:
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Aminsinichi/wearable-hrv/master?labpath=docs%2Fexamples%2F)
 
 # User Installation
 
