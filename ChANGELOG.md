@@ -9,11 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Improved docstrings.
+-
 
 ### Fixed
 
 -
+
+## [0.1.13] - 2024-03-19
+
+### Added
+
+- Improved docstrings.
+- Improved documentation.
+- Add sample data.
+
+### Fixed
+
+- Warning errors of some functions.
 
 ## [0.1.12] - 2024-02-21
 
