@@ -6,7 +6,7 @@
 Welcome to the wearablehrv documentation!
 =========================================
 
-.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/blob/master/docs/img/cover.png
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/cover.png
     :alt: cover
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg

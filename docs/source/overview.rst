@@ -21,7 +21,7 @@ Usually, validating multiple devices at once is a cumbersome task, requiring a l
 
 This is how your experiment may look like: a participant wearing a few wearables named Kyto, Heartmath, Empatica, Rhythm, together with a gold-standard ECG (VU-AMS), with electrodes on the chest, and will perform different tasks in different conditions (e.g., sitting for 5 minutes, standing up for 3 minutes, walking for 3 minutes, and biking for 3 minutes, while having all the devices on):
 
-.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/blob/master/docs/img/Sensor%20Placement.png?raw=true
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/Sensor%20Placement.png?raw=true
     :alt: Sensor Placement
 
 Individual Pipeline
@@ -68,7 +68,7 @@ With a user-friendly GUI, correct the lag between devices, align data by croppin
 
     wearablehrv.individual.visual_inspection (data_chopped, devices, conditions,criterion)
 
-.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/blob/master/docs/img/visual_inspection.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/visual_inspection.PNG
     :alt: visual_inspection
 
 **Detect Outliers and Ectopic Beats**
@@ -87,7 +87,7 @@ Check how well you performed the preprocessing by comparing the detected outlier
 
     wearablehrv.individual.ibi_comparison_plot(data_chopped, data_pp, devices, conditions, criterion, width=20, height=10)
 
-.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/blob/master/docs/img/comparison_plot.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/comparison_plot.PNG
     :alt: comparison_plot
 
 Analyze and Plot
@@ -100,7 +100,7 @@ Easily calculate all relevant outcome variables (e.g., RMSSD, mean HR, frequency
     time_domain_features, frequency_domain_features = wearablehrv.individual.data_analysis(data_pp, devices, conditions)
     wearablehrv.individual.bar_plot(time_domain_features, frequency_domain_features, devices, conditions, width=20, height=25, bar_width = 0.15)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/bar_plot.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/bar_plot.PNG
     :alt: bar_plot
 
 Group Pipeline
@@ -132,7 +132,7 @@ A powerful tool to assess and report signal quality in all your wearables, in al
     data, features, summary_df, quality_df = wearablehrv.group.signal_quality(data, path, conditions, devices, features, criterion, file_names, ibi_threshold = 0.30, artefact_threshold = 0.30)
     wearablehrv.group.signal_quality_plot2(summary_df, condition_selection=False, condition=None)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/signal_quality.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/signal_quality.PNG
     :alt: signal_quality
 
 Statistical Analysis
@@ -147,7 +147,7 @@ Perform four of the most common statistical methods for validation, and create p
     mape_data = wearablehrv.group.mape_analysis(data, criterion, devices, conditions, features)
     wearablehrv.group.mape_plot(mape_data, features, conditions, devices)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/mape.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/mape.PNG
     :alt: mape
 
 **Regression Analysis**
@@ -157,7 +157,7 @@ Perform four of the most common statistical methods for validation, and create p
     regression_data = wearablehrv.group.regression_analysis(data, criterion, conditions, devices, features, path)
     wearablehrv.group.regression_plot(regression_data, data, criterion, conditions, devices, features, marker_color='red', width=10, height_per_condition=4)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/regression.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/regression.PNG
     :alt: regression
 
 **Intraclass Correlation Coefficient**
@@ -167,7 +167,7 @@ Perform four of the most common statistical methods for validation, and create p
     icc_data = wearablehrv.group.icc_analysis(data, criterion, devices, conditions, features, path, save_as_csv=False)
     wearablehrv.group.icc_plot(icc_data, conditions, devices, features)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/icc.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/icc.PNG
     :alt: icc
 
 **Bland-Altman Analysis**
@@ -177,7 +177,7 @@ Perform four of the most common statistical methods for validation, and create p
     blandaltman_data = wearablehrv.group.blandaltman_analysis(data, criterion, devices, conditions, features, path, save_as_csv=False)
     wearablehrv.group.blandaltman_plot(data, criterion, conditions, devices, features)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/bland_altman.PNG
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/bland_altman.PNG
     :alt: bland_altman
 
 Descriptive Plots
@@ -189,5 +189,5 @@ There are many options for you to meaningfully plot your group data and make an 
 
     wearablehrv.group.violin_plot (data, conditions, features, devices)
 
-.. image:: https://raw.githubusercontent/Aminsinichi/wearable-hrv/blob/master/docs/img/violin%20plot.png
+.. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/violin%20plot.png
     :alt: violin plot
