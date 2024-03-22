@@ -3,11 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to the wearablehrv documentation!
-=========================================
-
 .. image:: https://raw.githubusercontent.com/Aminsinichi/wearable-hrv/master/docs/img/cover.png?raw=true
     :alt: cover
+
+Welcome to the wearablehrv documentation!
+=========================================
 
 .. image:: https://img.shields.io/badge/License-MIT-yellow.svg
     :target: https://opensource.org/licenses/MIT
@@ -34,8 +34,8 @@ Questions
 
 For any questions regarding the package, please contact:
 
-- `aminsinichi@gmail.com <mailto:aminsinichi@gmail.com>`
-- `m.sinichi@vu.nl <mailto:m.sinichi@vu.nl>`
+- `aminsinichi@gmail.com`
+- `m.sinichi@vu.nl`
 
 .. toctree::
    :maxdepth: 2
