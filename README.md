@@ -23,18 +23,18 @@ For the complete documentation of the API and modules, visit:
 
 *Individual Pipeline*
 
-- [How to prepare your data for the individual pipeline](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/1.individual_data_preparation.ipynb)
-- [Preprocess your data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/2.individual_data_preprocessing.ipynb)
-- [Analyze your data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/3.individual_data_analysis.ipynb)
-- [Plot your data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/4.individual_data_plotting.ipynb)
-- [Learn more about the compatibility of wearablehrv with other platforms (Labfront, VU-AMS, Empatica)](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/individual_compatibility.ipynb)
+- [How to prepare your data for the individual pipeline](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/individual_pipeline/1.individual_data_preparation.ipynb)
+- [Preprocess your data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/individual_pipeline/2.individual_data_preprocessing.ipynb)
+- [Analyze your data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/individual_pipeline/3.individual_data_analysis.ipynb)
+- [Plot your data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/individual_pipeline/4.individual_data_plotting.ipynb)
+- [Learn more about the compatibility of wearablehrv with other platforms (Labfront, VU-AMS, Empatica)](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/individual_pipeline/individual_compatibility.ipynb)
 
 *Group Pipeline*
 
-- [How to prepare your data for the group pipeline](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/1.group_data_preparation.ipynb)
-- [Determine the signal quality of your wearables](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/2.group_signal_quality.ipynb)
-- [Perform four major statistical analyses to determine validity](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/3.group_data_analysis.ipynb)
-- [Descriptive plots for your group data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/getting_started/4.group_data_plotting.ipynb)
+- [How to prepare your data for the group pipeline](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/1.group_data_preparation.ipynb)
+- [Determine the signal quality of your wearables](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/2.group_signal_quality.ipynb)
+- [Perform four major statistical analyses to determine validity](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/3.group_data_analysis.ipynb)
+- [Descriptive plots for your group data](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/examples/group_pipeline/4.group_data_plotting.ipynb)
 
 # User Installation
 
@@ -119,7 +119,7 @@ With a user-friendly GUI, correct the lag between devices, align data by croppin
 wearablehrv.individual.visual_inspection (data_chopped, devices, conditions,criterion)
 ```
 
-![visual_inspection](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/visual_inspection.png)
+![visual_inspection](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/visual_inspection.PNG)
 
 **Detect Outliers and Ectopic Beats**
 
@@ -137,7 +137,7 @@ Check how well you performed the preprocessing by comparing the detected outlier
 wearablehrv.individual.ibi_comparison_plot(data_chopped, data_pp, devices, conditions, criterion, width=20, height=10)
 ```
 
-![comparison_plot](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/comparison_plot.png)
+![comparison_plot](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/comparison_plot.PNG)
 
 ### 1.3 Analyze and Plot
 
@@ -148,7 +148,7 @@ time_domain_features, frequency_domain_features = wearablehrv.individual.data_an
 wearablehrv.individual.bar_plot(time_domain_features, frequency_domain_features, devices, conditions, width=20, height=25, bar_width = 0.15)
 ```
 
-![bar_plot](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/bar_plot.png)
+![bar_plot](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/bar_plot.PNG)
 
 ## 2. Group Pipeline
 
@@ -176,7 +176,7 @@ data, features, summary_df, quality_df = wearablehrv.group.signal_quality(data, 
 wearablehrv.group.signal_quality_plot2(summary_df, condition_selection=False, condition=None)
 ```
 
-![signal_quality](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/signal_quality.png)
+![signal_quality](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/signal_quality.PNG)
 
 ### 2.3 Statistical Analysis
 
@@ -189,7 +189,7 @@ mape_data = wearablehrv.group.mape_analysis(data, criterion, devices, conditions
 wearablehrv.group.mape_plot(mape_data, features, conditions, devices)
 ```
 
-![mape](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/mape.png)
+![mape](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/mape.PNG)
 
 **Regression Analysis**
 
@@ -198,7 +198,7 @@ regression_data = wearablehrv.group.regression_analysis(data, criterion, conditi
 wearablehrv.group.regression_plot(regression_data, data, criterion, conditions, devices, features, marker_color='red', width=10, height_per_condition=4)
 ```
 
-![regression](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/regression.png)
+![regression](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/regression.PNG)
 
 **Intraclass Correlation Coefficient**
 
@@ -207,7 +207,7 @@ icc_data = wearablehrv.group.icc_analysis(data, criterion, devices, conditions, 
 wearablehrv.group.icc_plot(icc_data, conditions, devices, features)
 ```
 
-![icc](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/icc.png)
+![icc](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/icc.PNG)
 
 **Bland-Altman Analysis**
 
@@ -216,7 +216,7 @@ blandaltman_data = wearablehrv.group.blandaltman_analysis(data, criterion, devic
 wearablehrv.group.blandaltman_plot(data, criterion, conditions, devices, features)
 ```
 
-![bland_altman](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/bland_altman.png)
+![bland_altman](https://github.com/Aminsinichi/wearable-hrv/blob/master/docs/img/bland_altman.PNG)
 
 ### 2.4 Descriptive Plots
 
