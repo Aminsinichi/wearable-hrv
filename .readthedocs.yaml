@@ -17,7 +17,7 @@ build:
 
 # Optionally specify the formats to build
 formats: 
-  - html # Only build HTML documentation
+  - htmlzip # Only build HTML documentation
 
 # Define the Python environment and dependencies
 python:
