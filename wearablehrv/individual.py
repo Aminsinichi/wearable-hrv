@@ -2337,16 +2337,19 @@ def display_changes(
     )
 
     def display_formatted_dataframe(df, title):
-        formatted_df = df.applymap(lambda x: f"{x:.2f}")
         try:
             from IPython.display import display, Markdown
 
+            # Using Styler.format for formatting the DataFrame for display
+            formatted_df = df.style.format("{:.2f}")
             display(Markdown(f"**{title}**"))
             display(formatted_df)
             display(Markdown("---"))
         except:
             print(title)
-            print(formatted_df)
+            print(
+                df.applymap(lambda x: f"{x:.2f}")
+            )  # fallback to applymap in a non-IPython environment
             print("\n")
 
     def display_dataframes(time_feature, frequency_feature):
