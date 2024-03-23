@@ -398,20 +398,17 @@ def import_data(path, pp, devices):
                 data[device]["timestamp"], format="%H:%M:%S.%f"
             )
 
+            # Format timestamp column as string with format hh:mm:ss.mmm
+            data[device]["timestamp"] = data[device]["timestamp"].apply(
+                lambda x: x.strftime("%H:%M:%S.%f")[:-3]
+            )
         else:
-
-            for i in range(np.size(data[device]["timestamp"])):
-                timestamp_float = float(data[device].loc[i, "timestamp"])
-                data[device].loc[i, "timestamp"] = datetime.datetime.fromtimestamp(
-                    timestamp_float / 1000
-                )
-            data[device]["timestamp"] = pd.to_datetime(data[device]["timestamp"])
-
-        # Format timestamp column as string with format hh:mm:ss.mmm
-        data[device]["timestamp"] = data[device]["timestamp"].apply(
-            lambda x: x.strftime("%H:%M:%S.%f")[:-3]
-        )
-
+            # It is alreay a string
+            data[device]["timestamp"] = data[device]["timestamp"].apply(
+                lambda x: datetime.datetime.fromtimestamp(x / 1000).strftime(
+                    "%H:%M:%S.%f"
+                )[:-3]
+            )
     print("Datasets imported succesfully")
     return data
 
@@ -662,7 +659,7 @@ def chop_data(data, conditions, events, devices):
                 & (data[device]["timestamp"] < eventchopped[condition][1])
             ].copy()
             filtered_rows["timestamp"] = pd.to_datetime(
-                filtered_rows["timestamp"]
+                filtered_rows["timestamp"], format="%H:%M:%S.%f"
             )  # convert to datetime format
             data_chopped[device][
                 condition
