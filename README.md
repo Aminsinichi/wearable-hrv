@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Current version at PyPI](https://img.shields.io/pypi/v/wearablehrv.svg)](https://pypi.org/project/wearablehrv/)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.06240/status.svg)](https://doi.org/10.21105/joss.06240)
 ![Supported Python Versions](https://img.shields.io/pypi/pyversions/wearablehrv.svg)
 ![Last Commit](https://img.shields.io/github/last-commit/Aminsinichi/wearable-hrv)
 [![Twitter Follow](https://img.shields.io/twitter/follow/AminSinichi.svg?style=social)](https://twitter.com/AminSinichi)
@@ -53,12 +54,18 @@ The repository can be cloned:
 
 # Development
 
-`wearablehrv` was developed by Amin Sinichi <https://orcid.org/0009-0008-2491-1542>, during his PhD at Vrije Universiteit Amsterdam in Psychophysiology and Neuropsychology.  
+`wearablehrv` was developed by [Amin Sinichi](https://orcid.org/0009-0008-2491-1542), during his PhD at Vrije Universiteit Amsterdam. 
 
 **Contributors**
 
 - [Dr. Martin Gevonden](https://orcid.org/0000-0001-7867-1443)
 - [Prof dr. Lydia Krabbendam](https://orcid.org/0000-0003-4074-5149)
+
+# How to Cite:
+
+The package is published in the Journal of Open Source Software (JOSS). Please cite it as follows:
+
+Sinichi et al., (2024). WearableHRV: A Python package for the validation of heart rate and heart rate variability in wearables. Journal of Open Source Software, 9(100), 6240, https://doi.org/10.21105/joss.06240
 
 # Overview
 
