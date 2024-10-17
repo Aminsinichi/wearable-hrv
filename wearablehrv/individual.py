@@ -1476,7 +1476,7 @@ def ibi_comparison_plot(
 ###########################################################################
 
 
-def data_analysis(data_pp, devices, conditions):
+def data_analysis(data_pp, devices, conditions, **kwargs):
     """
     Calculates time domain and frequency domain HRV (Heart Rate Variability) features for pre-processed RR interval data
     using the hrvanalysis package.
@@ -1495,6 +1495,7 @@ def data_analysis(data_pp, devices, conditions):
         A list of strings representing the different devices used to collect the RR interval data.
     conditions : list of str
         A list of strings representing the different conditions under which the RR interval data was collected.
+    **kwargs : Additional keyword arguments to be passed to the HRV analysis functions, such as 'hf_band'.
 
     Returns
     -------
@@ -1529,7 +1530,7 @@ def data_analysis(data_pp, devices, conditions):
                     data_pp[device][condition]
                 )
                 frequency_domain_features[device][condition] = (
-                    get_frequency_domain_features(data_pp[device][condition])
+                    get_frequency_domain_features(data_pp[device][condition],**kwargs)
                 )
             except:
                 print(
